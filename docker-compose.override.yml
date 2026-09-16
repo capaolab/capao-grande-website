@@ -1,0 +1,17 @@
+# Development overrides. Loaded automatically by `docker compose up` alongside
+# docker-compose.yml, so no extra flags are needed for local development.
+
+services:
+  app:
+    build:
+      target: dev
+    environment:
+      NODE_ENV: development
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"

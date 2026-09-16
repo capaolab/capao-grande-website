@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   Sistema de Design — Capão Grande (Tailwind v4, CSS-first @theme)
+   Tokens derivados das Diretrizes do Site / design.md (Req 18, 20.3).
+   Paleta FECHADA: nenhuma cor fora deste conjunto entra no site (Req 18.2).
+   Raios 4–6px, borda 1px #e4dfd2, SEM sombra (Req 18.3).
+   ========================================================================== */
+
+:root {
+  /* Fundo/base do site — o corpo usa o fundo claro da paleta */
+  --background: #faf7f0;
+  --foreground: #55453a;
+}
+
+@theme {
+  /* --- Paleta fechada (Req 18.2) ------------------------------------------ */
+  --color-marrom: #55453a;        /* texto principal, botões primários, item ativo nav */
+  --color-marrom-escuro: #3e3229; /* hover de botão primário (Req 18.5) */
+  --color-paragrafo: #6b6052;     /* texto corrido */
+  --color-verde: #86a544;         /* títulos de seção, links, foco, hover (Req 18.4, 20.3) */
+  --color-oliva: #b9cc6a;         /* etiqueta destaque, filete cardápio, numeração processo */
+  --color-fundo: #faf7f0;         /* fundo do site */
+  --color-papel: #fffdf8;         /* fundo de cards, rodapé, blocos */
+  --color-borda: #e4dfd2;         /* linhas, bordas, divisores (Req 18.3) */
+  --color-borda-clara: #ece8dc;   /* variante em listas */
+  --color-placeholder: #a89c8a;   /* texto de "a confirmar" (Req 19) */
+
+  /* Tokens semânticos base */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* --- Tipografia (Req 18.1) ---------------------------------------------- */
+  /* Fornecidas por lib/design/fonts.ts (task 9.1) via next/font:
+     EB Garamond -> --font-serif ; Karla -> --font-sans */
+  --font-serif: var(--font-serif), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-sans), system-ui, -apple-system, Arial, sans-serif;
+
+  /* --- Raios 4–6px (Req 18.3) --------------------------------------------- */
+  --radius-sm: 4px;
+  --radius: 5px;
+  --radius-lg: 6px;
+
+  /* --- Larguras / espaçamentos (Req 18.6) --------------------------------- */
+  --spacing-conteudo: 1120px; /* largura máx do conteúdo */
+  --spacing-leitura: 820px;   /* medida de leitura confortável (760–900px) */
+}
+
+/* Sem sombra em nenhum lugar por design (Req 18.3) — desativa os utilitários
+   de sombra do Tailwind e qualquer sombra residual. */
+@theme {
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+  --inset-shadow-2xs: none;
+  --inset-shadow-xs: none;
+  --inset-shadow-sm: none;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-marrom);
+  font-family: var(--font-sans);
+}
+
+/* Sem sombras: reforço global (Req 18.3) */
+* {
+  box-shadow: none !important;
+}
+
+/* --- Borda padrão do sistema: 1px sólida #e4dfd2 (Req 18.3) ---------------- */
+.borda-sistema {
+  border: 1px solid var(--color-borda);
+}
+
+/* --- Foco visível em #86a544 (Req 20.3) ----------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--color-verde);
+  outline-offset: 2px;
+}
+
+/* --- Grade reflow automático (Req 18.7) ----------------------------------- */
+/* Colunas de largura mínima entre 240px e 320px; desce a coluna única em
+   telas estreitas por conta do auto-fit. */
+.grade-reflow {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.grade-reflow-larga {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+/* --- Hover verde em elementos interativos (Req 18.4) ---------------------- */
+.hover-verde:hover {
+  color: var(--color-verde);
+  border-color: var(--color-verde);
+}
+
+/* --- Botão primário: base marrom, escurece para #3e3229 no hover (Req 18.5) */
+.btn-primario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-marrom);
+  color: var(--color-papel);
+  border: 1px solid var(--color-borda);
+  border-radius: var(--radius);
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-sans);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.btn-primario:hover {
+  background-color: var(--color-marrom-escuro); /* #3e3229 (Req 18.5) */
+}

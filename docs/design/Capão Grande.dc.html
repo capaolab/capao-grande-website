@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Karla:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #faf7f0; }
+  * { box-sizing: border-box; }
+  a { color: #86a544; text-decoration: none; border-bottom: 1px solid #d5e09c; }
+  a:hover { color: #55453a; border-bottom-color: #55453a; }
+  input, textarea, select, button { font: inherit; color: inherit; }
+  ::placeholder { color: #a9a094; }
+</style>
+</helmet>
+<div style="font-family: Karla, system-ui, sans-serif; color: #55453a; background: #faf7f0; min-height: 100vh;">
+
+  <header style="position: sticky; top: 0; z-index: 20; background: rgba(250,247,240,0.94); backdrop-filter: blur(6px); border-bottom: 1px solid #e4dfd2;">
+    <div style="max-width: 1120px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+      <img src="assets/logo.png" alt="Capão Grande — Pizzaria Integral" style="height: 88px; width: auto; display: block;" />
+      <nav style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+        <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="7">
+          <button type="button" onClick="{{ nav.onClick }}" style="{{ nav.style }}">{{ nav.label }}</button>
+        </sc-for>
+      </nav>
+    </div>
+  </header>
+
+  <sc-if value="{{ isInicio }}" hint-placeholder-val="{{ true }}">
+  <main style="max-width: 1120px; margin: 0 auto; padding: 48px 24px 96px;">
+
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 48px; align-items: start;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;">
+          <span style="display: inline-block; padding: 5px 12px; border-radius: 999px; background: #b9cc6a; color: #3f3a24; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;">Em destaque</span>
+          <span style="font-size: 13px; color: #8a7f70; letter-spacing: 0.04em;">{{ heroData }}</span>
+        </div>
+        <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(34px, 5vw, 58px); line-height: 1.06; letter-spacing: -0.01em; margin: 0 0 20px; text-wrap: pretty;">{{ heroTitulo }}</h1>
+        <p style="font-size: 19px; line-height: 1.6; color: #6b6052; margin: 0 0 14px; max-width: 54ch; text-wrap: pretty;">{{ heroResumo }}</p>
+        <sc-if value="{{ showEn }}" hint-placeholder-val="{{ true }}">
+          <p style="font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 17px; line-height: 1.55; color: #9a8f80; margin: 0 0 24px; max-width: 54ch;">{{ heroResumoEn }}</p>
+        </sc-if>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;">
+          <button type="button" onClick="{{ abrirHero }}" style="border: 0; background: #55453a; color: #faf7f0; padding: 13px 22px; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #3e3229;">Ler o informe</button>
+          <button type="button" onClick="{{ irCardapio }}" style="border: 1px solid #cfc7b6; background: transparent; color: #55453a; padding: 13px 22px; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="border-color: #55453a;">Ver o cardápio</button>
+        </div>
+      </div>
+
+      <figure style="margin: 0; background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 28px 28px 22px;">
+        <div style="height: 260px; border-radius: 4px; background-image: repeating-linear-gradient(135deg, #f1eee3 0 10px, #e8e4d6 10px 20px); display: flex; align-items: flex-end; justify-content: center; padding: 16px;">
+          <span style="font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.06em; color: #8a8271; background: #fffdf8; padding: 5px 10px; border-radius: 3px;">imagem do informe em destaque</span>
+        </div>
+        <figcaption style="margin-top: 14px; font-size: 13px; line-height: 1.5; color: #8a7f70;">Imagem de capa do informe, no formato quadrado para reaproveitar nas redes sociais.</figcaption>
+      </figure>
+    </section>
+
+    <section style="margin-top: 72px; border-top: 1px solid #e4dfd2; padding-top: 40px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;">
+        <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0; color: #86a544;">Informes</h2>
+        <button type="button" onClick="{{ irInformes }}" style="border: 0; background: transparent; color: #55453a; font-size: 14px; font-weight: 700; cursor: pointer; padding: 0; border-bottom: 1px solid #cfc7b6;" style-hover="border-bottom-color: #86a544; color: #86a544;">Todos os informes</button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1px; background: #e4dfd2;">
+        <sc-for list="{{ informesHome }}" as="post" hint-placeholder-count="3">
+          <article style="background: #faf7f0; padding: 24px 24px 28px;">
+            <span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a89c8a;">{{ post.data }}</span>
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 23px; line-height: 1.2; margin: 10px 0 8px; text-wrap: pretty;">
+              <a href="#" onClick="{{ post.onAbrir }}" style="color: #55453a; border-bottom: 1px solid #ddd6c5;" style-hover="color: #86a544; border-bottom-color: #86a544;">{{ post.titulo }}</a>
+            </h3>
+            <p style="font-size: 15px; line-height: 1.6; color: #6b6052; margin: 0;">{{ post.resumo }}</p>
+          </article>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="margin-top: 64px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px;">
+      <button type="button" onClick="{{ irProcesso }}" style="text-align: left; cursor: pointer; background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 26px 26px 22px;" style-hover="border-color: #86a544;">
+        <img src="assets/erva.png" alt="" style="height: 54px; width: auto; display: block; margin-bottom: 14px;" />
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 24px; margin: 0 0 8px;">Da horta para a mesa</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #6b6052; margin: 0 0 14px;">Ingredientes frescos, mel do apiário da casa e lenha de reflorestamento.</p>
+        <span style="font-size: 14px; font-weight: 700; color: #86a544;">Como a pizza é feita →</span>
+      </button>
+      <button type="button" onClick="{{ irDelivery }}" style="text-align: left; cursor: pointer; background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 26px 26px 22px;" style-hover="border-color: #86a544;">
+        <img src="assets/molho.png" alt="" style="height: 54px; width: auto; display: block; margin-bottom: 14px;" />
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 24px; margin: 0 0 8px;">Pedido no WhatsApp</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #6b6052; margin: 0 0 14px;">Delivery no Vale do Capão com taxa por distância. Pagamento em Pix.</p>
+        <span style="font-size: 14px; font-weight: 700; color: #86a544;">Delivery e pagamento →</span>
+      </button>
+      <button type="button" onClick="{{ irPizzaria }}" style="text-align: left; cursor: pointer; background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 26px 26px 22px;" style-hover="border-color: #86a544;">
+        <img src="assets/mel.png" alt="" style="height: 54px; width: auto; display: block; margin-bottom: 14px;" />
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 24px; margin: 0 0 8px;">Horários</h3>
+        <p style="font-size: 15px; line-height: 1.6; color: #6b6052; margin: 0 0 14px;">Semana de carnaval: segunda a quinta. <span style="color: #a89c8a;">Horário regular a confirmar.</span></p>
+        <span style="font-size: 14px; font-weight: 700; color: #86a544;">A pizzaria →</span>
+      </button>
+    </section>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isInformes }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 900px; margin: 0 auto; padding: 56px 24px 96px;">
+    <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 16px; color: #86a544;">Informes</h2>
+    <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(30px, 4vw, 46px); line-height: 1.1; margin: 0 0 14px;">Recados curtos da pizzaria</h1>
+    <p style="font-size: 17px; line-height: 1.7; color: #6b6052; margin: 0 0 44px; max-width: 56ch;">Avisos de funcionamento, mutirões, novidades da horta. Cada informe é curto de propósito, para virar post nas redes sociais sem reescrever nada.</p>
+
+    <div style="display: grid; gap: 0;">
+      <sc-for list="{{ informesLista }}" as="post" hint-placeholder-count="4">
+        <article style="display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: baseline; padding: 26px 0; border-top: 1px solid #e4dfd2;">
+          <div style="flex: 0 0 120px;">
+            <span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a89c8a;">{{ post.data }}</span>
+          </div>
+          <div style="flex: 1 1 320px; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #86a544;">{{ post.tag }}</span>
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #b9a24a;">{{ post.selo }}</span>
+            </div>
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 28px; line-height: 1.15; margin: 0 0 10px; text-wrap: pretty;">
+              <a href="#" onClick="{{ post.onAbrir }}" style="color: #55453a; border-bottom: 1px solid #ddd6c5;" style-hover="color: #86a544; border-bottom-color: #86a544;">{{ post.titulo }}</a>
+            </h3>
+            <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">{{ post.resumo }}</p>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+
+    <div style="border-top: 1px solid #e4dfd2; padding-top: 28px; margin-top: 4px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+      <sc-if value="{{ temMais }}" hint-placeholder-val="{{ true }}">
+        <button type="button" onClick="{{ verMais }}" style="border: 1px solid #cfc7b6; background: transparent; color: #55453a; padding: 13px 22px; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="border-color: #86a544; color: #86a544;">Publicações mais antigas</button>
+      </sc-if>
+      <span style="font-size: 14px; color: #9a8f80;">{{ contagemInformes }}</span>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isPost }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 760px; margin: 0 auto; padding: 48px 24px 96px;">
+    <button type="button" onClick="{{ irInformes }}" style="border: 0; background: transparent; color: #86a544; font-size: 14px; font-weight: 700; cursor: pointer; padding: 0; margin-bottom: 32px;" style-hover="color: #55453a;">← Todos os informes</button>
+
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #86a544;">{{ postTag }}</span>
+      <span style="font-size: 13px; color: #8a7f70;">{{ postData }}</span>
+    </div>
+    <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(30px, 4.4vw, 48px); line-height: 1.08; margin: 0 0 26px; text-wrap: pretty;">{{ postTitulo }}</h1>
+
+    <div style="height: 300px; border-radius: 4px; background-image: repeating-linear-gradient(135deg, #f1eee3 0 10px, #e8e4d6 10px 20px); display: flex; align-items: flex-end; justify-content: center; padding: 16px; margin-bottom: 32px;">
+      <span style="font-family: ui-monospace, Menlo, monospace; font-size: 11px; letter-spacing: 0.06em; color: #8a8271; background: #fffdf8; padding: 5px 10px; border-radius: 3px;">imagem de capa do informe</span>
+    </div>
+
+    <p style="font-family: 'EB Garamond', Georgia, serif; font-size: 23px; line-height: 1.5; color: #55453a; margin: 0 0 28px;">{{ postResumo }}</p>
+    <div style="display: grid; gap: 20px;">
+      <sc-for list="{{ postCorpo }}" as="par" hint-placeholder-count="3">
+        <p style="font-size: 18px; line-height: 1.75; color: #6b6052; margin: 0;">{{ par.texto }}</p>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ showEn }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top: 36px; border-top: 1px solid #e4dfd2; padding-top: 24px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #a89c8a;">In english</span>
+        <p style="font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 18px; line-height: 1.6; color: #8a7f70; margin: 12px 0 0;">{{ postResumoEn }}</p>
+      </div>
+    </sc-if>
+
+    <div style="margin-top: 44px; border-top: 1px solid #e4dfd2; padding-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+      <span style="font-size: 14px; color: #9a8f80;">Compartilhe este informe:</span>
+      <a href="#" style="font-size: 14px; font-weight: 700;">WhatsApp</a>
+      <a href="#" style="font-size: 14px; font-weight: 700;">Instagram</a>
+      <a href="#" style="font-size: 14px; font-weight: 700;">Copiar link</a>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isPizzaria }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px;">
+    <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 16px; color: #86a544;">A pizzaria</h2>
+    <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(30px, 4vw, 46px); line-height: 1.1; margin: 0 0 40px; max-width: 32ch;">Onde estamos, quando abrimos, como falar com a gente</h1>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: start;">
+      <section style="background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 30px;">
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 18px;">Localização</h3>
+        <div style="height: 180px; border-radius: 4px; background-image: repeating-linear-gradient(135deg, #f1eee3 0 10px, #e8e4d6 10px 20px); display: flex; align-items: center; justify-content: center; margin-bottom: 18px;">
+          <span style="font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #8a8271; background: #fffdf8; padding: 5px 10px; border-radius: 3px;">mapa do Vale do Capão</span>
+        </div>
+        <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0 0 12px;">Vale do Capão, Palmeiras — Chapada Diamantina, Bahia.</p>
+        <p style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.6; color: #a89c8a; margin: 0;">rua e ponto de referência a confirmar<br />link do Google Maps a confirmar</p>
+      </section>
+
+      <section style="background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 30px;">
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 18px;">Horários</h3>
+        <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #ece8dc; font-size: 16px;"><span>Semana de carnaval</span><span style="font-weight: 700;">seg a qui</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #ece8dc; font-size: 16px;"><span>Quinta a domingo</span><span style="color: #a89c8a;">a confirmar</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #ece8dc; font-size: 16px;"><span>Segunda a quarta</span><span style="color: #a89c8a;">a confirmar</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; font-size: 16px;"><span>Último pedido</span><span style="color: #a89c8a;">a confirmar</span></div>
+        <p style="font-size: 15px; line-height: 1.6; color: #6b6052; margin: 18px 0 0;">Mudanças de funcionamento saem primeiro nos <a href="#" onClick="{{ irInformes }}">informes</a>.</p>
+      </section>
+
+      <section style="background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 30px;">
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 18px;">Contato</h3>
+        <div style="display: grid; gap: 16px;">
+          <div>
+            <span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a89c8a;">WhatsApp</span>
+            <p style="font-size: 17px; margin: 5px 0 0; color: #a89c8a;">número a confirmar</p>
+          </div>
+          <div>
+            <span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a89c8a;">Instagram</span>
+            <p style="font-size: 17px; margin: 5px 0 0; color: #a89c8a;">perfil a confirmar</p>
+          </div>
+          <div>
+            <span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a89c8a;">E-mail</span>
+            <p style="font-size: 17px; margin: 5px 0 0; color: #a89c8a;">endereço a confirmar</p>
+          </div>
+          <div>
+            <span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a89c8a;">Reservas e grupos</span>
+            <p style="font-size: 16px; line-height: 1.6; margin: 5px 0 0; color: #6b6052;">Combine pelo WhatsApp com antecedência para grupos grandes.</p>
+          </div>
+        </div>
+        <button type="button" onClick="{{ irDelivery }}" style="margin-top: 22px; border: 1px solid #cfc7b6; background: transparent; color: #55453a; padding: 12px 20px; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="border-color: #86a544; color: #86a544;">Delivery e pagamento</button>
+      </section>
+    </div>
+
+    <img src="assets/palmeira.png" alt="" style="display: block; width: 120px; height: auto; margin: 48px auto 0;" />
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isProcesso }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px;">
+    <div style="max-width: 60ch;">
+      <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 16px; color: #86a544;">Da horta para a mesa</h2>
+      <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(30px, 4.4vw, 48px); line-height: 1.08; margin: 0 0 24px; text-wrap: pretty;">Como a pizza do Capão é feita</h1>
+      <p style="font-size: 18px; line-height: 1.7; color: #6b6052; margin: 0;">Os ingredientes são selecionados, sempre frescos e preparados por nós, o mel é colhido de nosso apiário, tudo com muito amor e carinho em meio a natureza viva da Chapada Diamantina.</p>
+    </div>
+
+    <div style="margin-top: 56px; display: grid; gap: 0;">
+      <section style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+        <span style="flex: 0 0 60px; font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #b9cc6a; line-height: 1;">01</span>
+        <div style="flex: 1 1 280px; min-width: 0;">
+          <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Horta e compostagem</h3>
+          <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Os restos da cozinha voltam para a terra em forma de composto e alimentam a horta que abastece a pizzaria. Cenoura, tomate e temperos saem daí.</p>
+        </div>
+        <img src="assets/legumes.png" alt="" style="flex: 0 0 auto; width: 110px; height: auto; margin-left: auto;" />
+      </section>
+
+      <section style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+        <span style="flex: 0 0 60px; font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #b9cc6a; line-height: 1;">02</span>
+        <div style="flex: 1 1 280px; min-width: 0;">
+          <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">A massa integral</h3>
+          <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Uma massa fina e crocante, integral, preparada por nós. <span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #a89c8a;">tempo de fermentação e farinhas a confirmar</span></p>
+        </div>
+        <img src="assets/erva.png" alt="" style="flex: 0 0 auto; width: 96px; height: auto; margin-left: auto;" />
+      </section>
+
+      <section style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+        <span style="flex: 0 0 60px; font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #b9cc6a; line-height: 1;">03</span>
+        <div style="flex: 1 1 280px; min-width: 0;">
+          <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">O molho da casa</h3>
+          <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">O molho de tomate é produzido aqui. A cenoura ralada dá um sabor único à pizza, que se confunde quando misturado ao bom queijo mozzarella.</p>
+        </div>
+        <img src="assets/molho.png" alt="" style="flex: 0 0 auto; width: 54px; height: auto; margin-left: auto;" />
+      </section>
+
+      <section style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+        <span style="flex: 0 0 60px; font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #b9cc6a; line-height: 1;">04</span>
+        <div style="flex: 1 1 280px; min-width: 0;">
+          <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Forno a lenha de reflorestamento</h3>
+          <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">A lenha utilizada é toda de reflorestamento e mantemos um viveiro de mudas nativas, afirmando nosso compromisso com a natureza.</p>
+        </div>
+        <img src="assets/arvore-3.png" alt="" style="flex: 0 0 auto; width: 96px; height: auto; margin-left: auto;" />
+      </section>
+
+      <section style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2; border-bottom: 1px solid #e4dfd2;">
+        <span style="flex: 0 0 60px; font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #b9cc6a; line-height: 1;">05</span>
+        <div style="flex: 1 1 280px; min-width: 0;">
+          <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Finalização</h3>
+          <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">A pizza integral do Capão é finalizada com o molho verde e finas rodelas de tomate fresco. A de banana leva mel, canela, castanha de caju, linhaça, gergelim e semente de girassol.</p>
+        </div>
+        <img src="assets/banana.png" alt="" style="flex: 0 0 auto; width: 110px; height: auto; margin-left: auto;" />
+      </section>
+    </div>
+
+    <div style="margin-top: 40px; display: flex; gap: 12px; flex-wrap: wrap;">
+      <button type="button" onClick="{{ irCardapio }}" style="border: 0; background: #55453a; color: #faf7f0; padding: 13px 22px; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #3e3229;">Ver o cardápio</button>
+      <button type="button" onClick="{{ irSobre }}" style="border: 1px solid #cfc7b6; background: transparent; color: #55453a; padding: 13px 22px; border-radius: 4px; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="border-color: #55453a;">A história da pizzaria</button>
+    </div>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isSobre }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px;">
+    <div style="max-width: 62ch;">
+      <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 18px; color: #86a544;">Da horta para o mundo</h2>
+      <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(32px, 4.6vw, 52px); line-height: 1.08; margin: 0 0 28px; text-wrap: pretty;">Uma pizzaria que nasceu no quintal, em 1992</h1>
+      <p style="font-size: 18px; line-height: 1.7; color: #6b6052; margin: 0 0 18px;">Tudo começou em clima de família, lá em 1992, em volta da mesa, no quintal de casa. Os amigos foram chegando, o número de visitas foi crescendo, e, naturalmente, quando percebemos, estávamos recebendo turistas e todos os amigos que vinham atrás do sabor único da nossa pizza.</p>
+      <p style="font-size: 18px; line-height: 1.7; color: #6b6052; margin: 0 0 18px;">Os ingredientes são selecionados, sempre frescos e preparados por nós, o mel é colhido de nosso apiário, tudo com muito amor e carinho em meio a natureza viva da Chapada Diamantina.</p>
+      <p style="font-size: 18px; line-height: 1.7; color: #6b6052; margin: 0 0 18px;">A lenha utilizada é toda de reflorestamento e mantemos um viveiro de mudas nativas, afirmando nosso compromisso com a natureza.</p>
+      <p style="font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 22px; color: #86a544; margin: 0;">Saboreiem com prazer!</p>
+    </div>
+
+    <section style="margin-top: 72px; border-top: 1px solid #e4dfd2; padding-top: 44px;">
+      <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 8px; color: #86a544;">Cronologia</h2>
+      <p style="font-size: 15px; color: #9a8f80; margin: 0 0 40px;">Pizzaria e reflorestamento crescendo juntos. <span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #f1eee3; padding: 3px 7px; border-radius: 3px;">datas a confirmar com vocês</span></p>
+
+      <div style="display: grid; gap: 0;">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+          <span style="font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #86a544; line-height: 1; flex: 0 0 110px;">1992</span>
+          <div style="flex: 1 1 260px; min-width: 0;">
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">As primeiras pizzas no quintal</h3>
+            <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">A mesa da família recebe os primeiros amigos. A receita da massa integral se forma ali, no forno a lenha de casa.</p>
+          </div>
+          <img src="assets/arvore-6.png" alt="" style="width: 100%; max-width: 110px; height: auto; flex: 0 0 auto; margin-left: auto;" />
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+          <span style="font-family: 'EB Garamond', Georgia, serif; font-size: 22px; color: #a89c8a; line-height: 1.2; flex: 0 0 110px;">ano a confirmar</span>
+          <div style="flex: 1 1 260px; min-width: 0;">
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Viveiro de mudas nativas</h3>
+            <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Para que o forno nunca consuma mata nativa, a casa passa a produzir as próprias mudas e a usar só lenha de reflorestamento.</p>
+          </div>
+          <img src="assets/arvore-3.png" alt="" style="width: 100%; max-width: 110px; height: auto; flex: 0 0 auto; margin-left: auto;" />
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+          <span style="font-family: 'EB Garamond', Georgia, serif; font-size: 22px; color: #a89c8a; line-height: 1.2; flex: 0 0 110px;">ano a confirmar</span>
+          <div style="flex: 1 1 260px; min-width: 0;">
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Apiário próprio</h3>
+            <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">O mel colhido aqui passa a adoçar todos os sucos da casa.</p>
+          </div>
+          <img src="assets/mel.png" alt="" style="width: 100%; max-width: 78px; height: auto; flex: 0 0 auto; margin-left: auto;" />
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2;">
+          <span style="font-family: 'EB Garamond', Georgia, serif; font-size: 22px; color: #a89c8a; line-height: 1.2; flex: 0 0 110px;">ano a confirmar</span>
+          <div style="flex: 1 1 260px; min-width: 0;">
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Horta e compostagem</h3>
+            <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">As cascas e restos da cozinha voltam para a terra e viram tempero, cenoura e tomate da própria horta.</p>
+          </div>
+          <img src="assets/legumes.png" alt="" style="width: 100%; max-width: 110px; height: auto; flex: 0 0 auto; margin-left: auto;" />
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px 28px; align-items: flex-start; padding: 28px 0; border-top: 1px solid #e4dfd2; border-bottom: 1px solid #e4dfd2;">
+          <span style="font-family: 'EB Garamond', Georgia, serif; font-size: 34px; color: #86a544; line-height: 1; flex: 0 0 110px;">hoje</span>
+          <div style="flex: 1 1 260px; min-width: 0;">
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 26px; margin: 0 0 8px;">Apoio ao grupo ambiental do Capão</h3>
+            <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">A pizzaria apoia as ações do grupo ambiental do Vale do Capão e divulga os mutirões nos informes.</p>
+          </div>
+          <img src="assets/palmeira.png" alt="" style="width: 100%; max-width: 92px; height: auto; flex: 0 0 auto; margin-left: auto;" />
+        </div>
+      </div>
+    </section>
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isCardapio }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 32px 40px; align-items: flex-start; margin-bottom: 8px;">
+      <div style="flex: 1 1 320px; min-width: 0;">
+        <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 16px; color: #86a544;">Cardápio</h2>
+        <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(30px, 4vw, 46px); line-height: 1.1; margin: 0 0 18px;">Massa integral, fina e crocante</h1>
+        <p style="font-size: 17px; line-height: 1.7; color: #6b6052; margin: 0; max-width: 58ch;">Feita a partir de uma fina e crocante massa integral, depois recebe um delicioso molho de tomate produzido pela casa. A cenoura ralada dá um sabor único à pizza, que se confunde quando misturado ao bom queijo mozzarella.</p>
+        <sc-if value="{{ showEn }}" hint-placeholder-val="{{ true }}">
+          <p style="font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 16px; line-height: 1.6; color: #9a8f80; margin: 14px 0 0; max-width: 58ch;">Thin, crisp wholemeal crust with our own tomato sauce, grated carrot and mozzarella. Vegan option available — just ask.</p>
+        </sc-if>
+        <p style="font-size: 15px; font-weight: 700; margin: 20px 0 0;">Temos opção vegana. Consulte-nos.</p>
+        <button type="button" onClick="{{ irProcesso }}" style="margin-top: 18px; border: 0; background: transparent; color: #86a544; font-size: 15px; font-weight: 700; cursor: pointer; padding: 0; border-bottom: 1px solid #d5e09c;" style-hover="color: #55453a; border-bottom-color: #55453a;">Como a pizza é feita →</button>
+      </div>
+      <img src="assets/legumes.png" alt="" style="width: 200px; max-width: 100%; height: auto; display: block;" />
+    </div>
+
+    <div style="margin-top: 48px; display: grid; gap: 44px;">
+      <sc-for list="{{ grupos }}" as="grupo" hint-placeholder-count="4">
+        <section>
+          <div style="display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #b9cc6a; padding-bottom: 10px; margin-bottom: 4px; flex-wrap: wrap;">
+            <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0;">{{ grupo.nome }}</h3>
+            <span style="font-size: 13px; color: #a89c8a;">{{ grupo.legenda }}</span>
+          </div>
+          <sc-for list="{{ grupo.itens }}" as="item" hint-placeholder-count="5">
+            <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: baseline; padding: 13px 0; border-bottom: 1px solid #ece8dc;">
+              <div>
+                <span style="font-size: 17px; font-weight: 500;">{{ item.nome }}</span>
+                <span style="font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 16px; color: #8a7f70; margin-left: 10px;">{{ item.detalhe }}</span>
+              </div>
+              <span style="font-size: 16px; color: #55453a; white-space: nowrap;">{{ item.preco }}</span>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+    </div>
+
+    <p style="font-family: 'EB Garamond', Georgia, serif; font-style: italic; font-size: 18px; color: #8a7f70; margin: 36px 0 0;">Nossos sucos são adoçados com mel. A água é pura e à vontade.</p>
+    <img src="assets/vinho.png" alt="" style="width: 100%; max-width: 520px; height: auto; display: block; margin-top: 24px;" />
+  </main>
+  </sc-if>
+
+  <sc-if value="{{ isDelivery }}" hint-placeholder-val="{{ false }}">
+  <main style="max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px;">
+    <h2 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.22em; text-transform: uppercase; margin: 0 0 16px; color: #86a544;">Delivery e pagamento</h2>
+    <h1 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: clamp(30px, 4vw, 46px); line-height: 1.1; margin: 0 0 40px; max-width: 30ch;">Pedido pelo WhatsApp, pagamento em Pix</h1>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; align-items: start;">
+      <section style="background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 30px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #86a544;">Passo 1</span>
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 27px; margin: 10px 0 12px;">Faça o pedido</h3>
+        <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0 0 20px;">Mande a pizza, o tamanho e o ponto de entrega. Confirmamos o tempo de forno e a taxa antes de começar.</p>
+        <a href="#" style="display: inline-block; border: 0; background: #55453a; color: #faf7f0; padding: 12px 20px; border-radius: 4px; font-size: 15px; font-weight: 700;" style-hover="background: #3e3229;">WhatsApp da pizzaria</a>
+        <p style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #a89c8a; margin: 14px 0 0;">número a confirmar</p>
+      </section>
+
+      <section style="background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 30px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #86a544;">Passo 2</span>
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 27px; margin: 10px 0 12px;">Pague em Pix</h3>
+        <div style="width: 168px; max-width: 100%; height: 168px; border-radius: 4px; background-image: repeating-linear-gradient(135deg, #f1eee3 0 10px, #e8e4d6 10px 20px); display: flex; align-items: center; justify-content: center; text-align: center; padding: 12px; margin-bottom: 16px;">
+          <span style="font-family: ui-monospace, Menlo, monospace; font-size: 11px; line-height: 1.5; color: #8a8271; background: #fffdf8; padding: 5px 8px; border-radius: 3px;">QR code do Pix</span>
+        </div>
+        <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Leia o QR code ou copie a chave. Envie o comprovante na mesma conversa.</p>
+        <p style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #a89c8a; margin: 12px 0 0;">chave Pix a confirmar</p>
+      </section>
+
+      <section style="background: #fffdf8; border: 1px solid #e4dfd2; border-radius: 6px; padding: 30px;">
+        <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #86a544;">Passo 3</span>
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 27px; margin: 10px 0 12px;">Taxa por distância</h3>
+        <div style="display: grid; gap: 0;">
+          <div style="display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #ece8dc; font-size: 16px;"><span>Vila do Capão</span><span style="color: #a89c8a;">a confirmar</span></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #ece8dc; font-size: 16px;"><span>Até 5 km</span><span style="color: #a89c8a;">a confirmar</span></div>
+          <div style="display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; font-size: 16px;"><span>Acima de 5 km</span><span style="color: #a89c8a;">a confirmar</span></div>
+        </div>
+        <p style="font-size: 15px; line-height: 1.6; color: #6b6052; margin: 18px 0 0;">A taxa entra no valor total do Pix. Cada faixa precisa dos valores de vocês para ir ao ar.</p>
+      </section>
+    </div>
+
+    <section style="margin-top: 56px; border-top: 1px solid #e4dfd2; padding-top: 36px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 32px;">
+      <div>
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 12px;">Horários</h3>
+        <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Semana de carnaval: segunda a quinta.<br /><span style="color: #a89c8a;">Horário regular a confirmar.</span></p>
+      </div>
+      <div>
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 12px;">Onde estamos</h3>
+        <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Vale do Capão, Palmeiras — Chapada Diamantina, Bahia.<br /><a href="#" onClick="{{ irPizzaria }}">Mapa e contato</a></p>
+      </div>
+      <div>
+        <h3 style="font-family: 'EB Garamond', Georgia, serif; font-weight: 500; font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; margin: 0 0 12px;">Retirada</h3>
+        <p style="font-size: 16px; line-height: 1.65; color: #6b6052; margin: 0;">Pizza embalada em papel, sem plástico. Traga sua caixa se quiser.</p>
+      </div>
+    </section>
+  </main>
+  </sc-if>
+
+  <footer style="border-top: 1px solid #e4dfd2; background: #fffdf8;">
+    <div style="max-width: 1120px; margin: 0 auto; padding: 40px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;">
+      <img src="assets/mark.png" alt="" style="height: 40px; width: auto; display: block;" />
+      <p style="font-size: 14px; color: #9a8f80; margin: 0;">Vale do Capão, Chapada Diamantina — Bahia · Pizzaria integral desde 1992</p>
+    </div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;idioma&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Português + inglês&quot;,&quot;Só português&quot;],&quot;default&quot;:&quot;Português + inglês&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Conteúdo&quot;},&quot;mostrarVinhos&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Conteúdo&quot;},&quot;informesPorPagina&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:4,&quot;min&quot;:2,&quot;max&quot;:10,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Informes&quot;}}">
+const MENU = [
+  { cat: "Pizzas", nome: "Pizza Integral do Capão", detalhe: "molho da casa, cenoura ralada, mozzarella, molho verde", preco: "ver tamanhos" },
+  { cat: "Pizzas", nome: "Pizza Integral de Banana", detalhe: "mel, canela, mozzarella, castanha, linhaça, gergelim, girassol", preco: "ver tamanhos" },
+  { cat: "Tamanhos", nome: "Pequena", detalhe: "1 pessoa", preco: "R$ 30,00" },
+  { cat: "Tamanhos", nome: "Média", detalhe: "2 pessoas", preco: "R$ 45,00" },
+  { cat: "Tamanhos", nome: "Grande", detalhe: "3 pessoas", preco: "R$ 60,00" },
+  { cat: "Tamanhos", nome: "Família", detalhe: "4 pessoas", preco: "R$ 75,00" },
+  { cat: "Bebidas", nome: "Suco pequeno", detalhe: "jarra 0,5 l", preco: "R$ 8,00" },
+  { cat: "Bebidas", nome: "Suco médio", detalhe: "jarra 1,0 l", preco: "R$ 15,00" },
+  { cat: "Bebidas", nome: "Suco grande jarra", detalhe: "1,5 l", preco: "R$ 20,00" },
+  { cat: "Bebidas", nome: "Cerveja Bohemia", detalhe: "600 ml", preco: "R$ 10,00" },
+  { cat: "Bebidas", nome: "Cerveja Serramalte", detalhe: "600 ml", preco: "R$ 10,00" },
+  { cat: "Bebidas", nome: "Cerveja Heineken", detalhe: "600 ml", preco: "R$ 12,00" },
+  { cat: "Bebidas", nome: "Cachaça da casa", detalhe: "dose", preco: "R$ 5,00" },
+  { cat: "Vinhos", nome: "Adega do Vale", detalhe: "Cabernet Sauvignon - suave", preco: "R$ 25,00" },
+  { cat: "Vinhos", nome: "Vinha Maria Nature", detalhe: "Cabernet Sauvignon - suave", preco: "R$ 30,00" },
+  { cat: "Vinhos", nome: "Rendeiras", detalhe: "Syrah - meio seco", preco: "R$ 30,00" },
+  { cat: "Vinhos", nome: "Rio Sol", detalhe: "Cabernet Sauvignon", preco: "R$ 40,00" },
+  { cat: "Vinhos", nome: "Rio Sol", detalhe: "Cabernet Sauvignon - Syrah", preco: "R$ 40,00" },
+  { cat: "Vinhos", nome: "Rio Sol", detalhe: "Syrah", preco: "R$ 40,00" },
+  { cat: "Vinhos", nome: "Rio Sol", detalhe: "Tempranillo", preco: "R$ 40,00" },
+  { cat: "Vinhos", nome: "Rio Sol", detalhe: "Reserva Seleção", preco: "R$ 50,00" },
+  { cat: "Vinhos", nome: "Rio Sol Winemarker's", detalhe: "Touriga Nacional", preco: "R$ 70,00" },
+  { cat: "Vinhos", nome: "Rio Sol Winemarker's", detalhe: "Alicante Bouchet", preco: "R$ 70,00" },
+  { cat: "Vinhos", nome: "Vinha Maria", detalhe: "Reserva Selecionada", preco: "R$ 90,00" },
+  { cat: "Vinhos", nome: "Paralelo 8", detalhe: "", preco: "R$ 100,00" },
+  { cat: "Vinhos", nome: "Rio Sol Brut", detalhe: "espumante", preco: "R$ 36,00" },
+  { cat: "Vinhos", nome: "Rio Sol Moscatel", detalhe: "espumante", preco: "R$ 36,00" },
+  { cat: "Vinhos", nome: "Rio Sol Rosé", detalhe: "espumante", preco: "R$ 36,00" },
+  { cat: "Vinhos", nome: "Rio Sol Demi-sec", detalhe: "espumante", preco: "R$ 36,00" },
+  { cat: "Vinhos", nome: "Tinto em taça", detalhe: "suave", preco: "R$ 10,00" },
+  { cat: "Vinhos", nome: "Tinto em taça", detalhe: "seco", preco: "R$ 15,00" }
+];
+
+const LEGENDAS = {
+  Pizzas: "duas receitas da casa",
+  Tamanhos: "valem para as duas pizzas",
+  Bebidas: "sucos adoçados com mel",
+  Vinhos: "seleção do Vale do São Francisco"
+};
+
+const POSTS = [
+  {
+    id: "carnaval",
+    tag: "Funcionamento",
+    data: "12 de fevereiro",
+    destaque: true,
+    titulo: "Neste carnaval vamos funcionar de segunda a quinta",
+    resumo: "Aproveite a folia e recolha seu lixo. A pizzaria está apoiando o grupo ambiental do Capão, acesse o link e saiba mais.",
+    resumoEn: "Carnival week: open Monday to Thursday. Enjoy the festivities and take your rubbish with you — we support the Capão environmental group.",
+    corpo: [
+      "Na semana de carnaval o forno acende de segunda a quinta. Nos outros dias a equipe descansa e a horta também.",
+      "A pizzaria está apoiando o grupo ambiental do Capão na coleta de resíduos durante a folia. Se você quiser participar, o ponto de encontro e os horários estão no link do grupo.",
+      "Aproveite a folia e recolha seu lixo. O que sai da vila fica na vila."
+    ]
+  },
+  {
+    id: "mutirao",
+    tag: "Reflorestamento",
+    data: "Janeiro",
+    destaque: false,
+    titulo: "Mutirão de plantio no viveiro",
+    resumo: "Levamos 200 mudas nativas para a área de reflorestamento que abastece o forno.",
+    resumoEn: "Planting day: 200 native seedlings went into the reforestation area that feeds our oven.",
+    corpo: [
+      "As mudas saíram do nosso viveiro e foram plantadas na área que fornece a lenha do forno. A conta é simples: nada de mata nativa entra na fornalha.",
+      "Quem quiser ajudar no próximo mutirão pode avisar na pizzaria. Levamos ferramenta, água e pizza no fim do dia."
+    ]
+  },
+  {
+    id: "horta",
+    tag: "Horta",
+    data: "Dezembro",
+    destaque: false,
+    titulo: "Horta nova atrás do forno",
+    resumo: "Tomate, cenoura e manjericão passam a sair de cinco metros da cozinha.",
+    resumoEn: "New kitchen garden: tomato, carrot and basil now grow five metres from the kitchen.",
+    corpo: [
+      "Os canteiros novos ficaram atrás do forno, onde o sol bate a manhã inteira. A cenoura do molho e o manjericão do molho verde vêm de lá.",
+      "O composto usado nos canteiros é feito com as cascas da própria cozinha."
+    ]
+  },
+  {
+    id: "compostagem",
+    tag: "Compostagem",
+    data: "Novembro",
+    destaque: false,
+    titulo: "Compostagem aberta a visitas",
+    resumo: "Quem quiser conhecer o processo pode chegar antes das pizzas, às 16h.",
+    resumoEn: "Come see the composting: visits before service, at 4pm.",
+    corpo: [
+      "A pilha de composto fica ao lado do viveiro. Explicamos as camadas, o tempo de virada e o que pode ou não entrar.",
+      "A visita leva uns vinte minutos e é gratuita. Avise antes pelo WhatsApp para a gente reservar alguém para receber você."
+    ]
+  },
+  {
+    id: "apiario",
+    tag: "Apiário",
+    data: "Outubro",
+    destaque: false,
+    titulo: "Colheita do mel que adoça os sucos",
+    resumo: "O mel das nossas caixas voltou para a cozinha e já está nas jarras.",
+    resumoEn: "Honey harvest: our own hives now sweeten every juice on the menu.",
+    corpo: [
+      "O mel é colhido no apiário da casa e vai direto para as jarras de suco. Nenhum suco nosso leva açúcar refinado.",
+      "A colheita deste ano rendeu bem e deve durar até o fim da temporada de chuvas."
+    ]
+  },
+  {
+    id: "mudas",
+    tag: "Viveiro",
+    data: "Setembro",
+    destaque: false,
+    titulo: "Muda de nativa para quem vem jantar",
+    resumo: "Durante setembro, quem vier jantar leva uma muda do viveiro para plantar.",
+    resumoEn: "Through September, every dinner guest takes home a native seedling.",
+    corpo: [
+      "São mudas de espécies da Chapada, próprias para o clima daqui. Cada mesa leva uma.",
+      "Se você plantar, manda foto. A gente publica nos informes."
+    ]
+  },
+  {
+    id: "vegana",
+    tag: "Cardápio",
+    data: "Agosto",
+    destaque: false,
+    titulo: "Opção vegana nas duas pizzas",
+    resumo: "As duas receitas da casa podem sair sem queijo, com ajuste no molho.",
+    resumoEn: "Both house pizzas can be made vegan — just ask when ordering.",
+    corpo: [
+      "A pizza do Capão sai com molho da casa, cenoura ralada e molho verde, sem mozzarella. A de banana troca o queijo pela mistura de castanha, linhaça, gergelim e girassol.",
+      "Basta avisar no pedido. Temos opção vegana. Consulte-nos."
+    ]
+  }
+];
+
+const PAGINAS = [
+  { id: "inicio", label: "Início" },
+  { id: "informes", label: "Informes" },
+  { id: "pizzaria", label: "A pizzaria" },
+  { id: "cardapio", label: "Cardápio" },
+  { id: "delivery", label: "Delivery" },
+  { id: "sobre", label: "Sobre" }
+];
+
+class Component extends DCLogic {
+  state = {
+    pagina: "inicio",
+    postAberto: null,
+    limite: 4
+  };
+
+  ir(id) { this.setState({ pagina: id }); if (window.scrollTo) window.scrollTo(0, 0); }
+
+  abrir(id, e) {
+    if (e && e.preventDefault) e.preventDefault();
+    this.setState({ pagina: "post", postAberto: id });
+    if (window.scrollTo) window.scrollTo(0, 0);
+  }
+
+  renderVals() {
+    const p = this.state.pagina;
+    const idioma = this.props.idioma ?? "Português + inglês";
+    const cats = ["Pizzas", "Tamanhos", "Bebidas", "Vinhos"];
+    const mostrarVinhos = this.props.mostrarVinhos ?? true;
+    const catsVisiveis = mostrarVinhos ? cats : cats.filter(c => c !== "Vinhos");
+    const porPagina = this.props.informesPorPagina ?? 4;
+
+    const destaque = POSTS.find(x => x.destaque) || POSTS[0];
+    const outros = POSTS.filter(x => x.id !== destaque.id);
+    const limite = Math.max(porPagina, this.state.limite);
+    const lista = POSTS.slice(0, limite);
+    const aberto = POSTS.find(x => x.id === this.state.postAberto) || destaque;
+
+    const comAbrir = arr => arr.map(x => ({
+      id: x.id,
+      tag: x.tag,
+      data: x.data,
+      titulo: x.titulo,
+      resumo: x.resumo,
+      selo: x.destaque ? "em destaque" : "",
+      onAbrir: e => this.abrir(x.id, e)
+    }));
+
+    return {
+      navItems: PAGINAS.map(pg => ({
+        label: pg.label,
+        onClick: () => this.ir(pg.id),
+        style: {
+          border: 0,
+          background: p === pg.id ? "#55453a" : "transparent",
+          color: p === pg.id ? "#faf7f0" : "#7a6858",
+          padding: "9px 15px",
+          borderRadius: "4px",
+          fontSize: "15px",
+          fontWeight: p === pg.id ? 700 : 500,
+          cursor: "pointer"
+        }
+      })),
+      isInicio: p === "inicio",
+      isInformes: p === "informes",
+      isPost: p === "post",
+      isPizzaria: p === "pizzaria",
+      isProcesso: p === "processo",
+      isSobre: p === "sobre",
+      isCardapio: p === "cardapio",
+      isDelivery: p === "delivery",
+      showEn: idioma === "Português + inglês",
+      irInicio: () => this.ir("inicio"),
+      irInformes: e => { if (e && e.preventDefault) e.preventDefault(); this.ir("informes"); },
+      irCardapio: () => this.ir("cardapio"),
+      irDelivery: e => { if (e && e.preventDefault) e.preventDefault(); this.ir("delivery"); },
+      irPizzaria: e => { if (e && e.preventDefault) e.preventDefault(); this.ir("pizzaria"); },
+      irProcesso: () => this.ir("processo"),
+      irSobre: () => this.ir("sobre"),
+
+      heroData: destaque.data,
+      heroTitulo: destaque.titulo,
+      heroResumo: destaque.resumo,
+      heroResumoEn: destaque.resumoEn,
+      abrirHero: () => this.abrir(destaque.id),
+      informesHome: comAbrir(outros.slice(0, 3)),
+
+      informesLista: comAbrir(lista),
+      temMais: limite < POSTS.length,
+      verMais: () => this.setState({ limite: limite + porPagina }),
+      contagemInformes: Math.min(limite, POSTS.length) + " de " + POSTS.length + " informes",
+
+      postTag: aberto.tag,
+      postData: aberto.data,
+      postTitulo: aberto.titulo,
+      postResumo: aberto.resumo,
+      postResumoEn: aberto.resumoEn,
+      postCorpo: aberto.corpo.map((t, i) => ({ id: i, texto: t })),
+
+      grupos: catsVisiveis.map(c => ({
+        nome: c,
+        legenda: LEGENDAS[c],
+        itens: MENU.filter(it => it.cat === c)
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

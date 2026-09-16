@@ -1,0 +1,49 @@
+{
+  "name": "capao-grande-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run scripts/seed.ts",
+    "test": "vitest --run"
+  },
+  "dependencies": {
+    "@faceless-ui/modal": "3.0.0",
+    "@faceless-ui/scroll-info": "2.0.0",
+    "@payloadcms/db-postgres": "3.89.0",
+    "@payloadcms/next": "3.89.0",
+    "@payloadcms/richtext-lexical": "3.89.0",
+    "graphql": "16.14.2",
+    "next": "16.3.5",
+    "payload": "3.89.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sharp": "0.34.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "6.1.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.1.1",
+    "axe-core": "4.13.0",
+    "cross-env": "10.1.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "fast-check": "4.10.1",
+    "jsdom": "30.0.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "4.1.11",
+    "vitest-axe": "0.1.0"
+  }
+}
