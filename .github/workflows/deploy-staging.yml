@@ -1,7 +1,7 @@
 name: Staging Tag Deployment
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.APEACA_PROJECT_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.CAPAOGRANDE_PROJECT_ID }}
 on:
   push:
     tags:
@@ -11,10 +11,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Use static seed content instead of Payload/Postgres
+        # lib/queries.ts e next.config.ts leem esta variável para usar
+        # content/static-content.ts (dados de content/seed-data.ts resolvidos
+        # em memória) em vez do Payload Local API — o staging na Vercel não
+        # tem banco. `vercel build` propaga o conteúdo de
+        # .vercel/.env.preview.local (gerado por `vercel pull` acima) para o
+        # `next build` que ele roda internamente.
+        run: echo "CONTENT_SOURCE=static" >> .vercel/.env.preview.local
+      - name: Exclude Payload admin/API routes from the static export
+        # app/(payload) (admin + API REST/GraphQL) é inerentemente dinâmico e
+        # incompatível com `output: 'export'` (ver next.config.ts). Precisa
+        # sair de dentro de app/ de verdade: o App Router só ignora uma
+        # pasta se ela não estiver na árvore que ele varre — renomear no
+        # lugar (ex.: sufixo `_disabled`) NÃO basta, pois deixa de casar com
+        # a sintaxe de route group `(nome)` e vira um segmento de rota
+        # literal, então o Next tentaria construir as rotas dinâmicas de
+        # dentro dela mesmo assim. O runner é descartado ao final do job.
+        run: mv "app/(payload)" "../payload-route-group-excluded-from-static-export"
       - name: Build Project Artifacts
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy Project Artifacts to Vercel

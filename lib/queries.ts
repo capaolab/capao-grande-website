@@ -19,8 +19,22 @@ import type { Cardapio, Configuracoe, Cronologia, Informe } from '@/src/payload-
 
 import { agruparCardapio, type SecaoAgrupada } from '@/lib/cardapio'
 import { ordenarCronologia } from '@/lib/cronologia'
-import { INFORMES_PER_PAGE, paginar, type PaginationState } from '@/lib/pagination'
 import { getPayloadClient } from '@/lib/payload'
+import { INFORMES_PER_PAGE, paginar, type PaginationState } from '@/lib/pagination'
+import * as staticContent from '@/content/static-content'
+
+// Ambiente de staging estático (Vercel, sem Payload/Postgres — ver
+// .github/workflows/deploy-staging.yml e content/static-content.ts). Quando
+// `CONTENT_SOURCE=static`, cada função abaixo devolve os dados de seed
+// resolvidos em memória em vez de consultar a Local API.
+//
+// O `import` de `getPayloadClient` acima permanece ESTÁTICO (não
+// condicional/dinâmico): no build estático, `next.config.ts` configura
+// `turbopack.resolveAlias` para trocar `@/lib/payload` por
+// `lib/payload.static-stub.ts` ANTES da resolução de módulos — é isso que
+// impede o bundler de alcançar `@payload-config`/`@payloadcms/db-postgres`
+// nesse build, não a forma como o import é escrito aqui.
+const CONTEUDO_ESTATICO = process.env.CONTENT_SOURCE === 'static'
 
 /**
  * Informe em destaque da home (Requisitos 10.1, 5.8).
@@ -31,6 +45,8 @@ import { getPayloadClient } from '@/lib/payload'
  * quando não há destaque publicado (a home aplica placeholder — Req 10.4).
  */
 export async function getInformeDestaque(): Promise<Informe | null> {
+  if (CONTEUDO_ESTATICO) return staticContent.getInformeDestaque()
+
   const payload = await getPayloadClient()
 
   const { docs } = await payload.find({
@@ -57,6 +73,8 @@ export async function getInformesRecentes(
   limit = 3,
   excludeId?: number,
 ): Promise<Informe[]> {
+  if (CONTEUDO_ESTATICO) return staticContent.getInformesRecentes(limit, excludeId)
+
   const payload = await getPayloadClient()
 
   const conditions: NonNullable<
@@ -100,6 +118,8 @@ export interface InformesPagina {
  * invariantes puras, em vez de depender apenas dos flags do Payload.
  */
 export async function getInformesPagina(page: number): Promise<InformesPagina> {
+  if (CONTEUDO_ESTATICO) return staticContent.getInformesPagina(page)
+
   const payload = await getPayloadClient()
 
   const result = await payload.find({
@@ -140,6 +160,8 @@ export interface InformeDetalhe {
  * `en` ausente resulte em `null` para a seção secundária (Requisito 12.4).
  */
 export async function getInformeBySlug(slug: string): Promise<InformeDetalhe | null> {
+  if (CONTEUDO_ESTATICO) return staticContent.getInformeBySlug(slug)
+
   const payload = await getPayloadClient()
 
   const { docs } = await payload.find({
@@ -179,6 +201,8 @@ export async function getInformeBySlug(slug: string): Promise<InformeDetalhe | n
  * paginação para trazer todos os itens ativos.
  */
 export async function getCardapioAgrupado(): Promise<SecaoAgrupada<Cardapio>[]> {
+  if (CONTEUDO_ESTATICO) return staticContent.getCardapioAgrupado()
+
   const payload = await getPayloadClient()
 
   const { docs } = await payload.find({
@@ -199,6 +223,8 @@ export async function getCardapioAgrupado(): Promise<SecaoAgrupada<Cardapio>[]> 
  * `ordenarCronologia`. A cronologia não tem filtro público de publicado/ativo.
  */
 export async function getCronologia(): Promise<Cronologia[]> {
+  if (CONTEUDO_ESTATICO) return staticContent.getCronologia()
+
   const payload = await getPayloadClient()
 
   const { docs } = await payload.find({
@@ -216,6 +242,8 @@ export async function getCronologia(): Promise<Cronologia[]> {
  * `findGlobal({ slug: 'configuracoes', locale: 'pt' })`.
  */
 export async function getConfiguracoes(): Promise<Configuracoe> {
+  if (CONTEUDO_ESTATICO) return staticContent.getConfiguracoes()
+
   const payload = await getPayloadClient()
 
   return payload.findGlobal({

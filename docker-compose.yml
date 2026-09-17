@@ -1,13 +1,39 @@
+# Base service definitions shared by every environment.
+#
+# `docker compose up` alone also picks up docker-compose.override.yml
+# automatically, which configures the development environment (hot
+# reload, mounted source). For production, merge docker-compose.prod.yml
+# explicitly instead:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
 services:
-  db:
-    image: postgres:16
+  postgres:
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: capao
-      POSTGRES_PASSWORD: capao
-      POSTGRES_DB: capao_grande
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-payload}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payload}
+      POSTGRES_DB: ${POSTGRES_DB:-payload}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payload} -d ${POSTGRES_DB:-payload}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+    environment:
+      DATABASE_URI: ${DATABASE_URI:-postgres://payload:payload@postgres:5432/payload}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-change-me}
+      NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL:-http://localhost:3000}
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
-  pgdata:
+  postgres_data:

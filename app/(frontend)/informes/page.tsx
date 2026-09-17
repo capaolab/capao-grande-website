@@ -48,7 +48,13 @@ export default async function InformesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }): Promise<ReactElement> {
-  const page = parsePage((await searchParams).page)
+  // Build estático de staging (CONTENT_SOURCE=static, ver next.config.ts):
+  // `output: 'export'` proíbe `await searchParams` (não há servidor para
+  // computar por query string — uma rota vira um único HTML). Não faz mal
+  // pular a leitura aqui: a camada estática (content/static-content.ts)
+  // ignora `page` e devolve todos os informes publicados numa página só.
+  const staticMode = process.env.CONTENT_SOURCE === 'static'
+  const page = staticMode ? 1 : parsePage((await searchParams).page)
 
   const { informes, pagination } = await getInformesPagina(page)
 

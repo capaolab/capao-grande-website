@@ -40,6 +40,21 @@ interface InformeDetalhePageProps {
 }
 
 /**
+ * Gera os parâmetros estáticos para o export de staging (Vercel,
+ * `CONTENT_SOURCE=static` — ver next.config.ts e
+ * .github/workflows/deploy-staging.yml). `output: 'export'` exige que TODO
+ * segmento dinâmico seja conhecido em build time; fora do modo estático
+ * devolve `[]`, preservando o comportamento atual (SSR sob demanda via
+ * `dynamicParams: true` implícito, quando há Payload/Postgres disponível).
+ */
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  if (process.env.CONTENT_SOURCE !== 'static') return []
+
+  const { getInformesSlugsEstaticos } = await import('@/content/static-content')
+  return getInformesSlugsEstaticos().map((slug) => ({ slug }))
+}
+
+/**
  * Metadados da página: define o <title> a partir do título do informe. Também
  * awaita `params` e busca o informe; null-safe (sem informe ⇒ título genérico,
  * a própria página cuida do 404 via notFound()).

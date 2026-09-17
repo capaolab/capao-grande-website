@@ -26,7 +26,11 @@ const ETIQUETAS = [
 
 // Slugify simples: normaliza acentos, minúsculas, troca não-alfanuméricos por
 // hífen e remove hífens nas pontas. Usado pelo hook de geração de slug.
-function slugify(input: string): string {
+//
+// Exportado para que content/static-content.ts (fixture de staging estático)
+// derive os mesmos slugs que o hook geraria num Payload real, sem duplicar a
+// lógica.
+export function slugify(input: string): string {
   return input
     .normalize('NFD')
     // Remove marcas diacríticas (acentos) sem depender de dependências externas.
