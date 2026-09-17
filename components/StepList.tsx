@@ -71,7 +71,7 @@ export function StepList({ steps, className }: StepListProps): ReactElement {
                 name={step.watercolor}
                 width={80}
                 height={80}
-                className="w-20"
+                className="h-auto w-20"
               />
             ) : null}
 

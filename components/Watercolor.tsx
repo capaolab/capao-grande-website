@@ -78,8 +78,12 @@ export function Watercolor({
       priority={priority}
       // Fundo claro, sem sombra/borda por design (Req 18.3): nenhuma classe de
       // sombra/borda é aplicada; sombras já são globalmente desativadas em
-      // app/globals.css. `h-auto` preserva a proporção quando a largura muda.
-      className={['h-auto', className].filter(Boolean).join(' ')}
+      // app/globals.css. O dimensionamento é responsabilidade explícita do
+      // call site via `className` (ex.: `w-24 h-auto` ou `h-14 w-auto`) — o
+      // componente NÃO injeta `h-auto` automaticamente, pois isso conflitaria
+      // com alturas fixas do chamador (duas utilidades de `height` no Tailwind
+      // são resolvidas pela ordem do CSS gerado, não pela ordem das classes).
+      className={className}
     />
   )
 }

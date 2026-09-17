@@ -58,7 +58,7 @@ export function NavCard({
   return (
     <div className={cardClasses}>
       {watercolor ? (
-        <Watercolor name={watercolor} width={96} height={96} className="w-24" />
+        <Watercolor name={watercolor} width={96} height={96} className="h-auto w-24" />
       ) : null}
 
       <h3 className="font-serif text-xl text-[color:var(--color-marrom)]">

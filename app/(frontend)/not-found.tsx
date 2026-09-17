@@ -32,7 +32,7 @@ export default function NotFound(): ReactElement {
       className="mx-auto flex w-full max-w-[var(--spacing-leitura)] flex-col items-center py-20 text-center"
     >
       {/* Grafismo decorativo (Req 18.8, 20.1) — sem significado ⇒ alt="". */}
-      <Watercolor name="mark" width={120} height={120} className="mb-8 w-28" />
+      <Watercolor name="mark" width={120} height={120} className="mb-8 h-auto w-28" />
 
       {/* Único <h1> da página (Req 20.2). */}
       <h1
