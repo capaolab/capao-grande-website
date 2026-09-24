@@ -73,9 +73,11 @@ const ITENS_CARDAPIO: Cardapio[] = [
     id: 1,
     secao: 'Bebidas',
     nome: 'Suco de laranja',
-    detalhe: 'natural',
-    // Preço preservado palavra por palavra (Req 14.4): "jarra 1,5 l".
-    preco: 'jarra 1,5 l',
+    // Detalhe preservado palavra por palavra (Req 14.4): "jarra 1,5 l".
+    detalhe: 'jarra 1,5 l',
+    // Preço numérico (Tarefa 6 de delivery-pedidos.md): formatado na
+    // renderização como "R$ 20,00".
+    preco: 20,
     ordem: 1,
     ativo: true,
     updatedAt: '2024-01-01T00:00:00.000Z',
@@ -86,8 +88,24 @@ const ITENS_CARDAPIO: Cardapio[] = [
     secao: 'Bebidas',
     nome: 'Refrigerante',
     detalhe: null,
-    preco: 'R$ 8,00',
+    preco: 8,
     ordem: 2,
+    ativo: true,
+    updatedAt: '2024-01-01T00:00:00.000Z',
+    createdAt: '2024-01-01T00:00:00.000Z',
+  },
+]
+
+// Pizza sem preço próprio (preco: null): a seção Pizzas exibe "ver tamanhos"
+// (preço depende do tamanho), preservando o cardápio impresso (Tarefa 6).
+const ITENS_PIZZAS: Cardapio[] = [
+  {
+    id: 3,
+    secao: 'Pizzas',
+    nome: 'Pizza Integral do Capão',
+    detalhe: 'molho da casa',
+    preco: null,
+    ordem: 1,
     ativo: true,
     updatedAt: '2024-01-01T00:00:00.000Z',
     createdAt: '2024-01-01T00:00:00.000Z',
@@ -140,11 +158,19 @@ describe('Snapshots do sistema de design (Req 18.2, 18.3)', () => {
     expect(container.innerHTML).toMatchSnapshot()
   })
 
-  it('<MenuSection> fixa filete oliva, divisores e preço verbatim', () => {
+  it('<MenuSection> fixa filete oliva, divisores e preço formatado', () => {
     const { container } = render(
       <MenuSection secao="Bebidas" itens={ITENS_CARDAPIO} />,
     )
     expect(container.innerHTML).toMatchSnapshot()
+  })
+
+  it('<MenuSection> exibe "ver tamanhos" para pizza sem preço próprio', () => {
+    const { container } = render(<MenuSection secao="Pizzas" itens={ITENS_PIZZAS} />)
+    // Tarefa 6 de delivery-pedidos.md: preco null na seção Pizzas exibe o
+    // texto do cardápio impresso, não o placeholder.
+    expect(container.textContent).toContain('ver tamanhos')
+    expect(container.querySelector('[data-placeholder]')).toBeNull()
   })
 
   it('<Timeline> fixa divisores, ano em destaque e placeholder do ano', () => {
@@ -201,7 +227,8 @@ describe('Contrato de tokens: paleta, raios, bordas e ausência de sombra (Req 1
     const heading = container.querySelector('h2')
     expect(heading?.className).toContain('var(--color-oliva)')
     expect(container.innerHTML).toContain('var(--color-borda-clara)')
-    // Req 14.4: preço preservado palavra por palavra.
+    // Req 14.4: detalhe preservado palavra por palavra; preço numérico
+    // formatado como moeda pt-BR (Tarefa 6 de delivery-pedidos.md).
     expect(container.textContent).toContain('jarra 1,5 l')
     expect(container.textContent).toContain('R$ 8,00')
     // Req 18.3: nenhuma sombra.

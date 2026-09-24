@@ -5,9 +5,15 @@ import type { CollectionConfig } from 'payload'
 // Campos (Req 6.1): secao, nome, detalhe, preco, ordem, ativo.
 // - `secao` restrito às 4 opções fixas (Req 6.2).
 // - `detalhe` localizado pt/en (Req 3.4).
-// - `preco` é TEXTO, nunca número (Req 6.3), para preservar valores como
-//   "R$ 30,00", "ver tamanhos", "dose" e "jarra 1,5 l" palavra por palavra;
-//   a renderização pública exibe o texto sem reformatação (Req 6.4).
+// - `preco` é NÚMERO (não obrigatório) — decisão registrada em
+//   docs/features/delivery-pedidos.md (P1 / Tarefa 6): o antigo Requisito 6.3
+//   (preço como texto verbatim, ex.: "ver tamanhos") DEIXA DE VALER, pois um
+//   preço numérico canônico é pré-requisito para calcular o subtotal de
+//   pedidos de delivery. A formatação pt-BR ("R$ 30,00") acontece na camada de
+//   renderização (`renderPreco` em lib/cardapio.ts). Itens de preço variável
+//   (Pizzas, cujo valor depende do tamanho) ficam com `preco: null` — o preço
+//   é resolvido pela combinação pizza + tamanho (seção Tamanhos) no pedido, e
+//   a renderização pública exibe "ver tamanhos" nesse caso (MenuSection).
 // - `ordem` (number) ordena os itens dentro de cada seção (Req 6.5).
 // - `ativo` (checkbox) filtra a listagem pública na camada de queries (Req 6.6).
 
@@ -49,13 +55,15 @@ export const Cardapio: CollectionConfig = {
     },
     {
       name: 'preco',
-      // Req 6.3: preço é SEMPRE texto, nunca número, para preservar valores
-      // não numéricos ("ver tamanhos", "dose", "jarra 1,5 l") verbatim.
-      type: 'text',
-      label: 'Preço',
+      // Número, NÃO obrigatório (delivery-pedidos.md, P1 / Tarefa 6): o preço
+      // numérico é o valor canônico; a formatação "R$ 30,00" acontece na
+      // renderização (renderPreco em lib/cardapio.ts). Itens de preço variável
+      // (Pizzas) ficam sem preço próprio — resolvido via seção Tamanhos.
+      type: 'number',
+      label: 'Preço (R$)',
       admin: {
         description:
-          'Texto livre preservado palavra por palavra (ex.: "R$ 30,00", "ver tamanhos", "dose", "jarra 1,5 l").',
+          'Valor numérico em reais (ex.: 30 para "R$ 30,00"). Deixe vazio em itens cujo preço depende do tamanho (pizzas).',
       },
     },
     {

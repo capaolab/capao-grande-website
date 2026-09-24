@@ -187,7 +187,8 @@ describe.skipIf(!dbAvailable)('leituras públicas (Payload + Postgres)', () => {
       data: {
         secao: 'Pizzas',
         nome: data.nome,
-        preco: 'R$ 30,00',
+        // Preço numérico (Tarefa 6 de delivery-pedidos.md — Req 6.3 revogado).
+        preco: 30,
         ordem: 1,
         ativo: data.ativo,
       },

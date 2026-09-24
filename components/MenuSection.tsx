@@ -1,9 +1,14 @@
 // <MenuSection> — seção do cardápio agrupada por `secao` (Req 14.1, 14.3, 14.4).
 //
 // Renderiza um grupo do cardápio: nome do item à ESQUERDA e PREÇO À DIREITA
-// (Req 14.3), separados por um filete fino. O texto do preço é exibido PALAVRA
-// POR PALAVRA via `renderPreco(item.preco)` (Req 14.4) — nunca reformatado.
+// (Req 14.3), separados por um filete fino. O preço é um NÚMERO formatado como
+// moeda pt-BR via `renderPreco(item.preco)` (Tarefa 6 de
+// docs/features/delivery-pedidos.md — o Req 6.3/14.4 de preço-texto foi
+// revogado): a saída ("R$ 30,00") é visualmente idêntica ao cardápio impresso.
 //
+// Itens com `preco: null`: quando a seção é 'Pizzas', exibe o texto "ver
+// tamanhos" (fidelidade ao cardápio impresso — o preço da pizza depende do
+// tamanho, seção Tamanhos); nas demais seções, cai no <Placeholder>.
 // Placeholders (Req 19): quando `nome`, `detalhe` ou `preco` estão ausentes,
 // exibe <Placeholder> em vez de fabricar dados. O agrupamento/ordenação por
 // `ordem` é feito por `agruparCardapio` (lib/cardapio.ts) na camada de página;
@@ -57,10 +62,17 @@ export function MenuSection({ secao, itens, className }: MenuSectionProps): Reac
               ) : null}
             </div>
 
-            {/* PREÇO À DIREITA, palavra por palavra via renderPreco (Req 14.3, 14.4). */}
-            {item.preco != null && item.preco.trim() !== '' ? (
+            {/* PREÇO À DIREITA, formatado via renderPreco (Req 14.3; Tarefa 6
+                de delivery-pedidos.md). `preco: null` na seção Pizzas exibe
+                "ver tamanhos" (o preço da pizza depende do tamanho); nas demais
+                seções, preço ausente cai no placeholder (Req 19). */}
+            {item.preco != null ? (
               <span className="whitespace-nowrap text-right font-serif text-[color:var(--color-marrom)]">
                 {renderPreco(item.preco)}
+              </span>
+            ) : secao === 'Pizzas' ? (
+              <span className="whitespace-nowrap text-right font-serif text-[color:var(--color-marrom)]">
+                ver tamanhos
               </span>
             ) : (
               <Placeholder label="preço a confirmar" className="whitespace-nowrap text-right" />

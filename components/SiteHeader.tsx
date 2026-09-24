@@ -14,9 +14,14 @@
 // e a imagem nunca renderize no tamanho intrínseco (711px), que estourava a
 // barra nos dois modos.
 //
-// Nav responsiva: a partir de `md` os links ficam em linha; abaixo disso um
-// botão hamburger abre/fecha um painel vertical dentro do header. O painel
-// fecha ao trocar de rota, ao clicar num link e via tecla Escape.
+// Nav responsiva: a partir de `md` os links ficam em linha, agrupados à
+// direita JUNTO do botão "Entrar"; abaixo disso um botão hamburger abre/fecha
+// um painel vertical dentro do header. O painel fecha ao trocar de rota, ao
+// clicar num link e via tecla Escape.
+//
+// Mobile: "Entrar" à esquerda, logo CENTRALIZADO (posicionamento absoluto,
+// fora do fluxo) e hamburger à direita. O "Entrar" NÃO aparece no painel
+// hamburger — já está visível na barra.
 //
 // Acessibilidade: landmark <nav> com `aria-label`, links com nomes acessíveis
 // e `aria-current="page"` no item ativo (Req 20.2, 20.3). O botão hamburger tem
@@ -84,12 +89,20 @@ export function SiteHeader(): ReactElement {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-borda bg-papel/80 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-conteudo items-center justify-between gap-x-6 px-6 py-3">
+      {/* `min-h-20` no mobile: como o logo é absoluto (fora do fluxo), a
+          altura mínima garante que a barra acomode os 56px do logo + py-3. */}
+      <div className="relative mx-auto flex min-h-20 w-full max-w-conteudo items-center justify-between gap-x-6 px-6 py-3 md:min-h-0">
         {/* Logo como link para a home. Altura limitada: 56px no mobile, 88px
             (Req 18.4) no desktop; dimensões intrínsecas reais (711×485) +
             `w-auto` preservam a proporção. É o nome do site, então recebe um
-            alt significativo. */}
-        <Link href="/" aria-label="Capão Grande — página inicial" className="shrink-0">
+            alt significativo. No mobile fica CENTRALIZADO via posicionamento
+            absoluto (fora do fluxo), entre o "Entrar" (esquerda) e o
+            hamburger (direita). */}
+        <Link
+          href="/"
+          aria-label="Capão Grande — página inicial"
+          className="absolute left-1/2 shrink-0 -translate-x-1/2 md:static md:translate-x-0"
+        >
           <Watercolor
             name="logo"
             width={711}
@@ -100,8 +113,9 @@ export function SiteHeader(): ReactElement {
           />
         </Link>
 
-        {/* Navegação em linha — somente desktop (>= md). */}
-        <nav aria-label="Navegação principal" className="hidden md:block">
+        {/* Navegação em linha — somente desktop (>= md). `ml-auto` agrupa a
+            nav JUNTO do botão "Entrar" no lado direito da barra. */}
+        <nav aria-label="Navegação principal" className="ml-auto hidden md:block">
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 font-sans text-[0.95rem]">
             {NAV_ITEMS.map((item) => {
               const ativo = isAtivo(pathname, item.href)
@@ -119,6 +133,14 @@ export function SiteHeader(): ReactElement {
             })}
           </ul>
         </nav>
+
+        {/* Botão "Entrar" — ação (não é item de conteúdo, então fica fora de
+            NAV_ITEMS e sem aria-current). Desktop: botão compacto à direita,
+            colado na nav; mobile: primeiro item no fluxo (o logo é absoluto e
+            a nav está oculta), então o `justify-between` o deixa à ESQUERDA. */}
+        <Link href="/login" className="btn-primario px-3 py-1.5 text-[0.95rem]">
+          Entrar
+        </Link>
 
         {/* Botão hamburger — somente mobile (< md). Ícone SVG decorativo:
             3 barras quando fechado, X quando aberto. */}

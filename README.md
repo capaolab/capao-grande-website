@@ -3,6 +3,7 @@
 ## Índice
 
 - [Stack Tecnológica](#stack-tecnológica)
+- [Documentação de Features](#documentação-de-features)
 - [Como Rodar](#como-rodar)
   - [Desenvolvimento](#desenvolvimento)
   - [Produção](#produção)
@@ -19,6 +20,10 @@
 - [Tailwind CSS](https://tailwindcss.com)
 - [TypeScript](https://www.typescriptlang.org)
 - Docker / Docker Compose
+
+## Documentação de Features
+
+Toda nova funcionalidade deve ser documentada em `docs/features/` usando o template [`docs/features/_template.md`](docs/features/_template.md), que define as seções CONTEXTO, REGRAS DE NEGÓCIO, TAREFAS e REFERÊNCIAS.
 
 ## Como Rodar
 

@@ -9,9 +9,11 @@
 // - No máximo UM `Informe_Destaque` (Req 9.2). Apenas o informe "carnaval"
 //   recebe `destaque: true`; o hook de unicidade da coleção reforça a
 //   invariante mesmo que o seed erre.
-// - Textos do cardápio preservados PALAVRA POR PALAVRA (Req 9.3, 6.3),
-//   incluindo "ver tamanhos", "dose", "jarra 1,5 l" e os detalhes verbatim do
-//   cardápio impresso (fonte: docs/design).
+// - Textos do cardápio preservados PALAVRA POR PALAVRA nos campos textuais
+//   (Req 9.3): "dose", "jarra 1,5 l" e os detalhes verbatim do cardápio
+//   impresso (fonte: docs/design). O `preco` é NÚMERO (Tarefa 6 de
+//   docs/features/delivery-pedidos.md — o Req 6.3 de preço-texto foi
+//   revogado); pizzas ficam com `preco: null` (preço por tamanho).
 // - Dados reais desconhecidos (horários, endereço, linkMapa, WhatsApp,
 //   Instagram, e-mail, chave Pix, QR Pix, anos incertos da cronologia) gravados
 //   como o marcador literal "a confirmar" — NUNCA fabricados (Req 9.4, 19.2).
@@ -77,7 +79,8 @@ async function seed() {
     }
   }
 
-  // Cardápio — textos verbatim (Req 9.3).
+  // Cardápio — textos verbatim (Req 9.3); `preco` numérico (Tarefa 6 de
+  // docs/features/delivery-pedidos.md).
   for (const item of CARDAPIO) {
     await payload.create({
       collection: 'cardapio',
@@ -86,7 +89,7 @@ async function seed() {
         secao: item.secao,
         nome: item.nome,
         detalhe: item.detalhe,
-        preco: item.preco, // preservado palavra por palavra
+        preco: item.preco, // number | null (null = pizzas, preço por tamanho)
         ordem: item.ordem,
         ativo: true,
       },

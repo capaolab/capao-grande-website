@@ -19,9 +19,10 @@ import type { Payload } from 'payload'
 //      relê o estado persistido no banco.
 //   3. Assere as invariantes:
 //        - No MÁXIMO um Informe_Destaque (Req 9.2); dado o seed, exatamente 1.
-//        - Textos do cardápio preservados PALAVRA POR PALAVRA (Req 9.3):
-//          "ver tamanhos" (preço de Pizzas), "dose" e "jarra 1,5 l" (detalhes)
-//          existem byte a byte.
+//        - Cardápio coerente com o modelo numérico de preço (Tarefa 6 de
+//          docs/features/delivery-pedidos.md): pizzas têm `preco: null` (preço
+//          por tamanho) e os tamanhos têm preço numérico; os detalhes verbatim
+//          "dose" e "jarra 1,5 l" (Req 9.3) existem byte a byte.
 //        - Contagens mínimas coerentes (informes >= 1, cardapio >= 1).
 //   4. Idempotência: roda o seed uma segunda vez e confirma que as contagens
 //      são estáveis e a invariante de destaque (<= 1) se mantém.
@@ -150,7 +151,7 @@ describe.skipIf(!dbAvailable)('invariantes do seed (Payload + Postgres)', () => 
   )
 
   it(
-    'preserva os textos do cardápio palavra por palavra (Req 9.3)',
+    'cardápio coerente com o modelo numérico de preço (Req 9.3; Tarefa 6 de delivery-pedidos)',
     async () => {
       // Lê todos os itens do cardápio no locale padrão (pt).
       const { docs, totalDocs } = await payload.find({
@@ -164,19 +165,25 @@ describe.skipIf(!dbAvailable)('invariantes do seed (Payload + Postgres)', () => 
       expect(totalDocs).toBeGreaterThanOrEqual(1)
       expect(docs.length).toBeGreaterThanOrEqual(1)
 
-      const precos = docs.map((d) => (d as { preco?: string }).preco)
       const detalhes = docs.map((d) => (d as { detalhe?: string }).detalhe)
       const pizzas = docs.filter((d) => (d as { secao?: string }).secao === 'Pizzas')
+      const tamanhos = docs.filter((d) => (d as { secao?: string }).secao === 'Tamanhos')
 
-      // "ver tamanhos": preço não numérico das Pizzas, byte a byte (Req 6.3, 9.3).
+      // Pizzas: preço NULL (preço por tamanho — Tarefa 6; o antigo texto
+      // "ver tamanhos" do Req 6.3 não existe mais no banco).
       expect(pizzas.length).toBeGreaterThanOrEqual(1)
-      expect(pizzas.some((d) => (d as { preco?: string }).preco === 'ver tamanhos')).toBe(true)
-      expect(precos).toContain('ver tamanhos')
+      expect(pizzas.every((d) => (d as { preco?: number | null }).preco == null)).toBe(true)
 
-      // "dose": detalhe verbatim (Cachaça da casa) (Req 6.3, 9.3).
+      // Tamanhos: preço NUMÉRICO definido (carregam o preço das pizzas).
+      expect(tamanhos.length).toBeGreaterThanOrEqual(1)
+      expect(
+        tamanhos.every((d) => typeof (d as { preco?: number | null }).preco === 'number'),
+      ).toBe(true)
+
+      // "dose": detalhe verbatim (Cachaça da casa) (Req 9.3).
       expect(detalhes).toContain('dose')
 
-      // "jarra 1,5 l": detalhe verbatim (Suco grande) (Req 6.3, 9.3).
+      // "jarra 1,5 l": detalhe verbatim (Suco grande) (Req 9.3).
       expect(detalhes).toContain('jarra 1,5 l')
     },
     120_000,

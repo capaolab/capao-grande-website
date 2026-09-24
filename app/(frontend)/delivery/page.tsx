@@ -4,7 +4,10 @@
 //  - Lê o Global_Configuracoes via `getConfiguracoes()` (lib/queries.ts).
 //  - Monta um <StepList> com EXATAMENTE 3 passos (Req 15.1):
 //      1. Pedido por WhatsApp — link wa.me/<dígitos> com nome acessível, ou
-//         <Placeholder> quando `whatsapp` está ausente/"a confirmar".
+//         <Placeholder> quando `whatsapp` está ausente/"a confirmar". Aponta
+//         também para o formulário online `/pedido` (docs/features/
+//         delivery-pedidos.md, Tarefa 2): o atendente pode enviar o link do
+//         formulário na conversa (RN01 — o funil começa no WhatsApp).
 //      2. Pagamento por Pix com QR — chave Pix (ou <Placeholder>) + imagem do
 //         QR via <CmsImage> (que exibe placeholder listrado quando `qrPix`
 //         está ausente) (Req 15.2, 15.3).
@@ -24,6 +27,7 @@
 // App Router: página é async (Server Component).
 
 import type { ReactElement } from 'react'
+import Link from 'next/link'
 
 import { CmsImage } from '@/components/CmsImage'
 import { Placeholder } from '@/components/Placeholder'
@@ -114,23 +118,39 @@ export default async function DeliveryPage(): Promise<ReactElement> {
   const cfg = await getConfiguracoes()
 
   // Passo 1 — WhatsApp: link wa.me/<dígitos> ou <Placeholder> (Req 15.1, 15.4).
+  // Inclui a referência ao formulário online `/pedido` (delivery-pedidos.md):
+  // o funil começa na conversa, e o atendente pode enviar o link do formulário.
   const whatsappPendente = isAConfirmar(cfg.whatsapp)
   const passoWhatsApp: Step = {
     titulo: 'Peça pelo WhatsApp',
     descricao: 'Monte seu pedido e envie a mensagem pelo WhatsApp da pizzaria.',
     watercolor: 'molho',
-    children: whatsappPendente ? (
-      <Placeholder label="WhatsApp a confirmar" as="p" />
-    ) : (
-      <a
-        className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors"
-        href={`https://wa.me/${(cfg.whatsapp as string).replace(/\D/g, '')}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Abrir conversa no WhatsApp: ${cfg.whatsapp as string}`}
-      >
-        {cfg.whatsapp as string}
-      </a>
+    children: (
+      <div className="flex flex-col items-start gap-3">
+        {whatsappPendente ? (
+          <Placeholder label="WhatsApp a confirmar" as="p" />
+        ) : (
+          <a
+            className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors"
+            href={`https://wa.me/${(cfg.whatsapp as string).replace(/\D/g, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Abrir conversa no WhatsApp: ${cfg.whatsapp as string}`}
+          >
+            {cfg.whatsapp as string}
+          </a>
+        )}
+        <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
+          Na conversa, o atendente pode enviar o link do nosso formulário de pedido — você
+          também pode montar o pedido online e informar o código no WhatsApp.
+        </p>
+        <Link
+          href="/pedido"
+          className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors"
+        >
+          Montar pedido online
+        </Link>
+      </div>
     ),
   }
 

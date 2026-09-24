@@ -9,7 +9,9 @@ import { Cardapio } from './collections/Cardapio'
 import { Cronologia } from './collections/Cronologia'
 import { Informes } from './collections/Informes'
 import { Media } from './collections/Media'
+import { Pedidos } from './collections/Pedidos'
 import { Users } from './collections/Users'
+import { submeterPedido } from './endpoints/submeter-pedido'
 import { Configuracoes } from './globals/Configuracoes'
 
 const filename = fileURLToPath(import.meta.url)
@@ -38,6 +40,19 @@ if (!secret) {
 export default buildConfig({
   // Segredo para assinatura de sessões administrativas (Requisito 2.5).
   secret,
+  // Painel admin com a identidade visual do site: logo em aquarela na tela de
+  // login e mark no canto superior (componentes em src/components/admin).
+  // As cores/fontes do site chegam ao painel via app/(payload)/tema-capao.scss,
+  // importado em app/(payload)/layout.tsx.
+  admin: {
+    user: 'users',
+    components: {
+      graphics: {
+        Logo: '@/src/components/admin/Logo',
+        Icon: '@/src/components/admin/Icon',
+      },
+    },
+  },
   // Editor rich text lexical registrado no nível da config (Requisito 5.7);
   // o campo `corpo` de Informes usa richText herdando este editor.
   editor: lexicalEditor(),
@@ -64,9 +79,13 @@ export default buildConfig({
   // Informes: publicações/notícias (Req 5).
   // Cardapio: itens do cardápio (Req 6).
   // Cronologia: marcos da linha do tempo (Req 7).
-  collections: [Users, Media, Informes, Cardapio, Cronologia],
+  // Pedidos: pedidos de delivery (docs/features/delivery-pedidos.md, Tarefa 1).
+  collections: [Users, Media, Informes, Cardapio, Cronologia, Pedidos],
   // Configuracoes: global de configurações do estabelecimento (Req 8).
   globals: [Configuracoes],
+  // Endpoint público de submissão de pedidos (delivery-pedidos.md, Tarefa 4):
+  // POST /api/submeter-pedido — honeypot + rate limit + validação server-side.
+  endpoints: [{ path: '/submeter-pedido', method: 'post', handler: submeterPedido }],
   // Saída dos tipos gerados por `payload generate:types` (task 4.7).
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

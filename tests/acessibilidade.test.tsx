@@ -191,8 +191,8 @@ const CARDAPIO: Array<{ secao: Cardapio['secao']; itens: Cardapio[] }> = [
   {
     secao: 'Bebidas',
     itens: [
-      { id: 1, secao: 'Bebidas', nome: 'Suco de laranja', detalhe: 'natural', preco: 'jarra 1,5 l', ordem: 1, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
-      { id: 2, secao: 'Bebidas', nome: 'Refrigerante', detalhe: null, preco: 'R$ 8,00', ordem: 2, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
+      { id: 1, secao: 'Bebidas', nome: 'Suco de laranja', detalhe: 'jarra 1,5 l', preco: 20, ordem: 1, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
+      { id: 2, secao: 'Bebidas', nome: 'Refrigerante', detalhe: null, preco: 8, ordem: 2, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
     ],
   },
 ]
@@ -261,6 +261,7 @@ import InformeDetalhePage from '../app/(frontend)/informes/[slug]/page'
 import PizzariaPage from '../app/(frontend)/pizzaria/page'
 import CardapioPage from '../app/(frontend)/cardapio/page'
 import DeliveryPage from '../app/(frontend)/delivery/page'
+import PedidoPage from '../app/(frontend)/pedido/page'
 import ProcessoPage from '../app/(frontend)/processo/page'
 import SobrePage from '../app/(frontend)/sobre/page'
 import NotFound from '../app/(frontend)/not-found'
@@ -328,6 +329,15 @@ describe('Acessibilidade (axe) das páginas públicas — Req 20.1, 20.2, 20.4',
 
   it('`/delivery` não tem violações de axe', async () => {
     const ui = await DeliveryPage()
+    const { container } = renderPagina(ui)
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
+  })
+
+  // A página `/pedido` renderiza o formulário (CONTENT_SOURCE não é 'static'
+  // nos testes). O <PedidoMapa> inicializa o Leaflet de forma assíncrona e
+  // protegida (try/catch), degradando sem quebrar a renderização em jsdom.
+  it('`/pedido` (formulário de delivery) não tem violações de axe', async () => {
+    const ui = await PedidoPage()
     const { container } = renderPagina(ui)
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
   })
@@ -438,6 +448,7 @@ describe('Hierarquia de cabeçalhos: um único <h1> por página — Req 20.2', (
     ['pizzaria', () => PizzariaPage()],
     ['cardapio', () => CardapioPage()],
     ['delivery', () => DeliveryPage()],
+    ['pedido', () => PedidoPage()],
     ['processo', () => ProcessoPage()],
     ['sobre', () => SobrePage()],
     ['not-found', () => NotFound()],

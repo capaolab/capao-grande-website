@@ -6,8 +6,9 @@
 //    agrupamento/ordenação é lógica pura testada por propriedade; a página
 //    apenas orquestra a leitura e a renderização.
 //  - Para cada grupo `{ secao, itens }`, renderiza <MenuSection>, que exibe o
-//    nome à esquerda e o PREÇO À DIREITA palavra por palavra via renderPreco
-//    (Req 14.3, 14.4). A página NÃO reformata preço em lugar nenhum.
+//    nome à esquerda e o PREÇO À DIREITA formatado como moeda pt-BR via
+//    renderPreco (Req 14.3; Tarefa 6 de delivery-pedidos.md). A página NÃO
+//    reformata preço em lugar nenhum.
 //  - Quando não há itens ativos (lista vazia), exibe <Placeholder> em vez de
 //    fabricar conteúdo (design "Estratégia de placeholder 'a confirmar'").
 //

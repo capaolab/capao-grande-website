@@ -1,0 +1,81 @@
+// tema-capao.scss — Tema do painel Payload com a identidade visual do site.
+//
+// Importado em app/(payload)/layout.tsx DEPOIS do custom.scss gerado. O CSS do
+// Payload é emitido dentro de `@layer payload-default`; como estas regras são
+// NÃO-layered, elas vencem a camada padrão sem precisar de !important.
+//
+// As fontes (Karla/EB Garamond) são carregadas via <link> no layout do route
+// group — `@import url(...)` aqui seria inválido no meio do bundle CSS final
+// e descartado pelo minificador.
+//
+// Estratégia: em vez de sobrescrever cada --theme-*, redefinimos as rampas
+// base (--color-base-* e --color-success-*), das quais todos os --theme-*
+// derivam. A rampa neutra usa os tons quentes da paleta fechada do site
+// (papel/fundo/borda/marrom) e a rampa de sucesso usa o verde/oliva — assim o
+// painel inteiro (login, nav, cards, inputs) herda as cores do design system,
+// inclusive no modo escuro, que reusa a mesma rampa invertida.
+
+:root {
+  /* --- Rampa neutra quente (papel -> marrom profundo) -------------------- */
+  --color-base-0: rgb(255, 253, 248); /* papel #fffdf8 */
+  --color-base-50: rgb(250, 247, 240); /* fundo #faf7f0 */
+  --color-base-100: rgb(244, 240, 230);
+  --color-base-150: rgb(236, 232, 220); /* borda-clara #ece8dc */
+  --color-base-200: rgb(228, 223, 210); /* borda #e4dfd2 */
+  --color-base-250: rgb(217, 211, 195);
+  --color-base-300: rgb(205, 198, 179);
+  --color-base-350: rgb(192, 184, 162);
+  --color-base-400: rgb(179, 170, 146);
+  --color-base-450: rgb(168, 156, 138); /* placeholder #a89c8a */
+  --color-base-500: rgb(151, 139, 121);
+  --color-base-550: rgb(135, 124, 107);
+  --color-base-600: rgb(119, 109, 94);
+  --color-base-650: rgb(107, 96, 82); /* parágrafo #6b6052 */
+  --color-base-700: rgb(95, 84, 71);
+  --color-base-750: rgb(85, 69, 58); /* marrom #55453a */
+  --color-base-800: rgb(74, 60, 50);
+  --color-base-850: rgb(62, 50, 41); /* marrom-escuro #3e3229 */
+  --color-base-900: rgb(51, 41, 34);
+  --color-base-950: rgb(38, 32, 25);
+  --color-base-1000: rgb(26, 21, 18);
+
+  /* --- Rampa de sucesso/acento (verde #86a544 / oliva #b9cc6a) ------------ */
+  --color-success-50: rgb(244, 248, 232);
+  --color-success-100: rgb(233, 242, 210);
+  --color-success-150: rgb(220, 234, 184);
+  --color-success-200: rgb(203, 224, 156);
+  --color-success-250: rgb(185, 204, 106); /* oliva #b9cc6a */
+  --color-success-300: rgb(165, 189, 84);
+  --color-success-350: rgb(149, 174, 74);
+  --color-success-400: rgb(134, 165, 68); /* verde #86a544 */
+  --color-success-450: rgb(118, 145, 64);
+  --color-success-500: rgb(103, 128, 58);
+  --color-success-550: rgb(89, 111, 52);
+  --color-success-600: rgb(76, 94, 46);
+  --color-success-650: rgb(64, 78, 40);
+  --color-success-700: rgb(53, 64, 34);
+  --color-success-750: rgb(43, 51, 29);
+  --color-success-800: rgb(34, 41, 24);
+  --color-success-850: rgb(26, 32, 19);
+  --color-success-900: rgb(18, 22, 13);
+  --color-success-950: rgb(11, 14, 8);
+
+  /* --- Tipografia do site (Karla corpo; EB Garamond serifada) ------------- */
+  --font-body: 'Karla', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  --font-serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+
+  /* --- Raios 4–6px do design system --------------------------------------- */
+  --style-radius-s: 4px;
+  --style-radius-m: 5px;
+  --style-radius-l: 6px;
+}
+
+/* Sem sombras em nenhum lugar — mandato global do design (Req 18.3). */
+* {
+  box-shadow: none !important;
+}
+
+/* Foco visível no verde do site (Req 20.3). */
+:root {
+  --accessibility-outline: 2px solid rgb(134, 165, 68);
+}

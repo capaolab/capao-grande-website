@@ -1,6 +1,11 @@
 // Funções puras do cardápio: renderização de preço e agrupamento por seção
 // (Requisitos 6 e 14). Nenhuma dependência de Payload/Next/DB para permitir
 // testes de propriedade (tasks 7.6 e 7.8) com entradas sintéticas.
+//
+// NOTA (delivery-pedidos.md, P1 / Tarefa 6): `preco` passou a ser NUMBER na
+// collection (o antigo Requisito 6.3 de preço-texto foi revogado). A
+// formatação pt-BR acontece aqui, em `renderPreco`, preservando o formato
+// histórico do cardápio impresso ("R$ 30,00").
 
 import type { Cardapio } from '@/src/payload-types'
 
@@ -18,15 +23,29 @@ export const ORDEM_SECOES: readonly SecaoCardapio[] = [
   'Vinhos',
 ] as const
 
+// Formatador pt-BR de moeda (BRL). O Intl gera um NO-BREAK SPACE (U+00A0)
+// entre "R$" e o valor; `renderPreco` normaliza para espaço comum (U+0020)
+// para preservar byte a byte o formato histórico do cardápio impresso
+// ("R$ 30,00"), do qual snapshots e testes dependem.
+const FORMATADOR_BRL = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+})
+
 /**
  * Renderiza o preço de um item do cardápio.
  *
- * É a identidade sobre a string armazenada (Requisitos 6.3, 6.4, 14.4): o texto
- * é preservado palavra por palavra, sem trim, sem reformatação numérica e sem
- * normalização de qualquer tipo. Retorna exatamente a string recebida.
+ * Desde a Tarefa 6 de docs/features/delivery-pedidos.md, `preco` é um NUMBER
+ * na collection (valor canônico); esta função é a camada de formatação:
+ * devolve o valor como moeda pt-BR no formato histórico "R$ 30,00" (espaço
+ * comum, vírgula decimal, duas casas). A saída visual para itens de preço fixo
+ * é idêntica ao texto original do cardápio impresso.
+ *
+ * Itens com `preco: null` (pizzas, preço por tamanho) NÃO passam por aqui:
+ * quem chama decide o texto (MenuSection exibe "ver tamanhos").
  */
-export function renderPreco(preco: string): string {
-  return preco
+export function renderPreco(preco: number): string {
+  return FORMATADOR_BRL.format(preco).replace(/\u00a0/g, ' ')
 }
 
 /** Forma mínima aceita por `agruparCardapio` (compatível com `Cardapio`). */

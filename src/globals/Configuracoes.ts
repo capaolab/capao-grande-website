@@ -9,8 +9,10 @@ import type { GlobalConfig } from 'payload'
 // - `taxasEntrega` é um array de itens com `distancia` e `valor` (Req 8.3).
 // - `qrPix` é um upload de imagem apontando para a Colecao_Media (Req 8.4).
 // - `valor` (taxa de entrega) é TEXTO, nunca número, para preservar o formato
-//   monetário verbatim ("R$ 5,00", "a confirmar"), alinhado à convenção do
-//   projeto de não coagir preços/valores a número (ver `preco` em Cardapio).
+//   monetário verbatim ("R$ 5,00", "a confirmar"). Diferente de `preco` em
+//   Cardapio (que virou número na Tarefa 6 de delivery-pedidos.md para permitir
+//   o cálculo de subtotal), a taxa de entrega não participa de cálculos e
+//   precisa aceitar o marcador "a confirmar" (Req 9.4).
 // - Todos os campos textuais aceitam o marcador "a confirmar"; a renderização
 //   pública aplica Placeholder_AConfirmar quando o valor é pendente (Req 19).
 // - Leitura liberada para consumo pelas páginas públicas (rodapé, /pizzaria,
@@ -90,7 +92,9 @@ export const Configuracoes: GlobalConfig = {
         {
           name: 'valor',
           // TEXTO, nunca número: preserva o formato monetário verbatim
-          // ("R$ 5,00", "a confirmar"), como `preco` em Cardapio.
+          // ("R$ 5,00") e aceita o marcador "a confirmar" (Req 9.4) — a taxa
+          // não participa de cálculos (ao contrário de `preco` em Cardapio,
+          // que virou número na Tarefa 6 de delivery-pedidos.md).
           type: 'text',
           label: 'Valor',
         },

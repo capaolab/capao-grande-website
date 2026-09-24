@@ -72,6 +72,7 @@ export interface Config {
     informes: Informe;
     cardapio: Cardapio;
     cronologia: Cronologia;
+    pedidos: Pedido;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +85,7 @@ export interface Config {
     informes: InformesSelect<false> | InformesSelect<true>;
     cardapio: CardapioSelect<false> | CardapioSelect<true>;
     cronologia: CronologiaSelect<false> | CronologiaSelect<true>;
+    pedidos: PedidosSelect<false> | PedidosSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -133,6 +135,7 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  role: 'admin' | 'funcionario' | 'cliente';
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -222,9 +225,9 @@ export interface Cardapio {
   nome: string;
   detalhe?: string | null;
   /**
-   * Texto livre preservado palavra por palavra (ex.: "R$ 30,00", "ver tamanhos", "dose", "jarra 1,5 l").
+   * Valor numérico em reais (ex.: 30 para "R$ 30,00"). Deixe vazio em itens cujo preço depende do tamanho (pizzas).
    */
-  preco?: string | null;
+  preco?: number | null;
   ordem?: number | null;
   ativo?: boolean | null;
   updatedAt: string;
@@ -244,6 +247,53 @@ export interface Cronologia {
   texto?: string | null;
   ilustracao?: (number | null) | Media;
   ordem?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pedidos".
+ */
+export interface Pedido {
+  id: number;
+  /**
+   * Código público gerado automaticamente na criação. O cliente o usa como referência na conversa do WhatsApp.
+   */
+  codigo?: string | null;
+  nome: string;
+  telefone: string;
+  itens: {
+    item: number | Cardapio;
+    quantidade: number;
+    /**
+     * Obrigatório quando o item é uma pizza (sem preço próprio): o preço vem do item da seção Tamanhos.
+     */
+    tamanho?: (number | null) | Cardapio;
+    /**
+     * Nome do item no momento do pedido, preenchido no servidor.
+     */
+    nomeSnapshot?: string | null;
+    /**
+     * Preço unitário resolvido no servidor a partir do cardápio (item ou tamanho) no momento do pedido.
+     */
+    precoUnitario?: number | null;
+    id?: string | null;
+  }[];
+  latitude: number;
+  longitude: number;
+  /**
+   * Indicação textual opcional de localidade ou ponto de referência (no Vale do Capão não há endereço formal).
+   */
+  localidade?: string | null;
+  observacoes?: string | null;
+  /**
+   * Soma dos produtos calculada no servidor a partir dos preços atuais do cardápio. NÃO inclui frete — o preço final é informado ao cliente pelo atendente via mensagem.
+   */
+  subtotal?: number | null;
+  /**
+   * Status INTERNO do atendente (RN09). Não é exposto ao cliente: toda a comunicação (confirmação, preço final com frete, saída para entrega) é feita via WhatsApp.
+   */
+  status: 'pendente' | 'pago' | 'em_transito' | 'finalizado';
   updatedAt: string;
   createdAt: string;
 }
@@ -290,6 +340,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'cronologia';
         value: number | Cronologia;
+      } | null)
+    | ({
+        relationTo: 'pedidos';
+        value: number | Pedido;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -338,6 +392,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -414,6 +469,33 @@ export interface CronologiaSelect<T extends boolean = true> {
   texto?: T;
   ilustracao?: T;
   ordem?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pedidos_select".
+ */
+export interface PedidosSelect<T extends boolean = true> {
+  codigo?: T;
+  nome?: T;
+  telefone?: T;
+  itens?:
+    | T
+    | {
+        item?: T;
+        quantidade?: T;
+        tamanho?: T;
+        nomeSnapshot?: T;
+        precoUnitario?: T;
+        id?: T;
+      };
+  latitude?: T;
+  longitude?: T;
+  localidade?: T;
+  observacoes?: T;
+  subtotal?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }

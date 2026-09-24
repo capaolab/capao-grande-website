@@ -190,53 +190,57 @@ export const INFORMES: SeedInforme[] = [
   },
 ]
 
-// Cardápio (Req 6, 9.3). `preco` e `detalhe` PRESERVADOS PALAVRA POR PALAVRA a
-// partir do cardápio impresso (fonte: docs/design). Inclui os formatos não
-// numéricos exigidos pelo Req 6.3: "ver tamanhos", "dose", "jarra 1,5 l".
+// Cardápio (Req 6, 9.3). `detalhe` PRESERVADO PALAVRA POR PALAVRA a partir do
+// cardápio impresso (fonte: docs/design) — inclui "jarra 1,5 l" e "dose".
+// `preco` é NÚMERO (reais) desde a Tarefa 6 de docs/features/delivery-pedidos.md
+// (P1): o valor canônico é numérico e a formatação "R$ 30,00" acontece na
+// renderização (renderPreco, lib/cardapio.ts). Pizzas têm `preco: null` porque
+// o valor depende do tamanho — os preços das pizzas vivem nos itens da seção
+// Tamanhos (Pequena 30, Média 45, Grande 60, Família 75).
 export type SeedCardapio = {
   secao: 'Pizzas' | 'Tamanhos' | 'Bebidas' | 'Vinhos'
   nome: string
   detalhe: string
-  preco: string
+  preco: number | null
   ordem: number
 }
 
 export const CARDAPIO: SeedCardapio[] = [
-  // Pizzas
-  { secao: 'Pizzas', nome: 'Pizza Integral do Capão', detalhe: 'molho da casa, cenoura ralada, mozzarella, molho verde', preco: 'ver tamanhos', ordem: 1 },
-  { secao: 'Pizzas', nome: 'Pizza Integral de Banana', detalhe: 'mel, canela, mozzarella, castanha, linhaça, gergelim, girassol', preco: 'ver tamanhos', ordem: 2 },
-  // Tamanhos
-  { secao: 'Tamanhos', nome: 'Pequena', detalhe: '1 pessoa', preco: 'R$ 30,00', ordem: 1 },
-  { secao: 'Tamanhos', nome: 'Média', detalhe: '2 pessoas', preco: 'R$ 45,00', ordem: 2 },
-  { secao: 'Tamanhos', nome: 'Grande', detalhe: '3 pessoas', preco: 'R$ 60,00', ordem: 3 },
-  { secao: 'Tamanhos', nome: 'Família', detalhe: '4 pessoas', preco: 'R$ 75,00', ordem: 4 },
-  // Bebidas — inclui "jarra 1,5 l" e "dose" verbatim (Req 6.3)
-  { secao: 'Bebidas', nome: 'Suco pequeno', detalhe: 'jarra 0,5 l', preco: 'R$ 8,00', ordem: 1 },
-  { secao: 'Bebidas', nome: 'Suco médio', detalhe: 'jarra 1,0 l', preco: 'R$ 15,00', ordem: 2 },
-  { secao: 'Bebidas', nome: 'Suco grande', detalhe: 'jarra 1,5 l', preco: 'R$ 20,00', ordem: 3 },
-  { secao: 'Bebidas', nome: 'Cerveja Bohemia', detalhe: '600 ml', preco: 'R$ 10,00', ordem: 4 },
-  { secao: 'Bebidas', nome: 'Cerveja Serramalte', detalhe: '600 ml', preco: 'R$ 10,00', ordem: 5 },
-  { secao: 'Bebidas', nome: 'Cerveja Heineken', detalhe: '600 ml', preco: 'R$ 12,00', ordem: 6 },
-  { secao: 'Bebidas', nome: 'Cachaça da casa', detalhe: 'dose', preco: 'R$ 5,00', ordem: 7 },
+  // Pizzas — preço variável por tamanho (null = sem preço próprio)
+  { secao: 'Pizzas', nome: 'Pizza Integral do Capão', detalhe: 'molho da casa, cenoura ralada, mozzarella, molho verde', preco: null, ordem: 1 },
+  { secao: 'Pizzas', nome: 'Pizza Integral de Banana', detalhe: 'mel, canela, mozzarella, castanha, linhaça, gergelim, girassol', preco: null, ordem: 2 },
+  // Tamanhos — carregam os preços das pizzas
+  { secao: 'Tamanhos', nome: 'Pequena', detalhe: '1 pessoa', preco: 30, ordem: 1 },
+  { secao: 'Tamanhos', nome: 'Média', detalhe: '2 pessoas', preco: 45, ordem: 2 },
+  { secao: 'Tamanhos', nome: 'Grande', detalhe: '3 pessoas', preco: 60, ordem: 3 },
+  { secao: 'Tamanhos', nome: 'Família', detalhe: '4 pessoas', preco: 75, ordem: 4 },
+  // Bebidas — detalhes "jarra 1,5 l" e "dose" preservados verbatim
+  { secao: 'Bebidas', nome: 'Suco pequeno', detalhe: 'jarra 0,5 l', preco: 8, ordem: 1 },
+  { secao: 'Bebidas', nome: 'Suco médio', detalhe: 'jarra 1,0 l', preco: 15, ordem: 2 },
+  { secao: 'Bebidas', nome: 'Suco grande', detalhe: 'jarra 1,5 l', preco: 20, ordem: 3 },
+  { secao: 'Bebidas', nome: 'Cerveja Bohemia', detalhe: '600 ml', preco: 10, ordem: 4 },
+  { secao: 'Bebidas', nome: 'Cerveja Serramalte', detalhe: '600 ml', preco: 10, ordem: 5 },
+  { secao: 'Bebidas', nome: 'Cerveja Heineken', detalhe: '600 ml', preco: 12, ordem: 6 },
+  { secao: 'Bebidas', nome: 'Cachaça da casa', detalhe: 'dose', preco: 5, ordem: 7 },
   // Vinhos
-  { secao: 'Vinhos', nome: 'Adega do Vale', detalhe: 'Cabernet Sauvignon - suave', preco: 'R$ 25,00', ordem: 1 },
-  { secao: 'Vinhos', nome: 'Vinha Maria Nature', detalhe: 'Cabernet Sauvignon - suave', preco: 'R$ 30,00', ordem: 2 },
-  { secao: 'Vinhos', nome: 'Rendeiras', detalhe: 'Syrah - meio seco', preco: 'R$ 30,00', ordem: 3 },
-  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Cabernet Sauvignon', preco: 'R$ 40,00', ordem: 4 },
-  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Cabernet Sauvignon - Syrah', preco: 'R$ 40,00', ordem: 5 },
-  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Syrah', preco: 'R$ 40,00', ordem: 6 },
-  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Tempranillo', preco: 'R$ 40,00', ordem: 7 },
-  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Reserva Seleção', preco: 'R$ 50,00', ordem: 8 },
-  { secao: 'Vinhos', nome: "Rio Sol Winemarker's", detalhe: 'Touriga Nacional', preco: 'R$ 70,00', ordem: 9 },
-  { secao: 'Vinhos', nome: "Rio Sol Winemarker's", detalhe: 'Alicante Bouchet', preco: 'R$ 70,00', ordem: 10 },
-  { secao: 'Vinhos', nome: 'Vinha Maria', detalhe: 'Reserva Selecionada', preco: 'R$ 90,00', ordem: 11 },
-  { secao: 'Vinhos', nome: 'Paralelo 8', detalhe: '', preco: 'R$ 100,00', ordem: 12 },
-  { secao: 'Vinhos', nome: 'Rio Sol Brut', detalhe: 'espumante', preco: 'R$ 36,00', ordem: 13 },
-  { secao: 'Vinhos', nome: 'Rio Sol Moscatel', detalhe: 'espumante', preco: 'R$ 36,00', ordem: 14 },
-  { secao: 'Vinhos', nome: 'Rio Sol Rosé', detalhe: 'espumante', preco: 'R$ 36,00', ordem: 15 },
-  { secao: 'Vinhos', nome: 'Rio Sol Demi-sec', detalhe: 'espumante', preco: 'R$ 36,00', ordem: 16 },
-  { secao: 'Vinhos', nome: 'Tinto em taça', detalhe: 'suave', preco: 'R$ 10,00', ordem: 17 },
-  { secao: 'Vinhos', nome: 'Tinto em taça', detalhe: 'seco', preco: 'R$ 15,00', ordem: 18 },
+  { secao: 'Vinhos', nome: 'Adega do Vale', detalhe: 'Cabernet Sauvignon - suave', preco: 25, ordem: 1 },
+  { secao: 'Vinhos', nome: 'Vinha Maria Nature', detalhe: 'Cabernet Sauvignon - suave', preco: 30, ordem: 2 },
+  { secao: 'Vinhos', nome: 'Rendeiras', detalhe: 'Syrah - meio seco', preco: 30, ordem: 3 },
+  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Cabernet Sauvignon', preco: 40, ordem: 4 },
+  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Cabernet Sauvignon - Syrah', preco: 40, ordem: 5 },
+  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Syrah', preco: 40, ordem: 6 },
+  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Tempranillo', preco: 40, ordem: 7 },
+  { secao: 'Vinhos', nome: 'Rio Sol', detalhe: 'Reserva Seleção', preco: 50, ordem: 8 },
+  { secao: 'Vinhos', nome: "Rio Sol Winemarker's", detalhe: 'Touriga Nacional', preco: 70, ordem: 9 },
+  { secao: 'Vinhos', nome: "Rio Sol Winemarker's", detalhe: 'Alicante Bouchet', preco: 70, ordem: 10 },
+  { secao: 'Vinhos', nome: 'Vinha Maria', detalhe: 'Reserva Selecionada', preco: 90, ordem: 11 },
+  { secao: 'Vinhos', nome: 'Paralelo 8', detalhe: '', preco: 100, ordem: 12 },
+  { secao: 'Vinhos', nome: 'Rio Sol Brut', detalhe: 'espumante', preco: 36, ordem: 13 },
+  { secao: 'Vinhos', nome: 'Rio Sol Moscatel', detalhe: 'espumante', preco: 36, ordem: 14 },
+  { secao: 'Vinhos', nome: 'Rio Sol Rosé', detalhe: 'espumante', preco: 36, ordem: 15 },
+  { secao: 'Vinhos', nome: 'Rio Sol Demi-sec', detalhe: 'espumante', preco: 36, ordem: 16 },
+  { secao: 'Vinhos', nome: 'Tinto em taça', detalhe: 'suave', preco: 10, ordem: 17 },
+  { secao: 'Vinhos', nome: 'Tinto em taça', detalhe: 'seco', preco: 15, ordem: 18 },
 ]
 
 // Cronologia (Req 7). O `ano` é texto (Req 7.2). O repertório do projeto marca
