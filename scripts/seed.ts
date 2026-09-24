@@ -21,6 +21,11 @@
 //   das três coleções e reinsere um conjunto fixo, produzindo sempre o mesmo
 //   estado previsível (sem duplicatas). O global é sobrescrito com os mesmos
 //   valores a cada execução.
+// - Primeiro usuário admin: se SEED_ADMIN_EMAIL e SEED_ADMIN_PASSWORD estiverem
+//   definidos no ambiente, o seed cria esse usuário na coleção `users` APENAS
+//   se ele ainda não existir (não recria nem sobrescreve a senha). Sem as
+//   variáveis, a criação é pulada — o seed continua útil em ambientes sem
+//   credenciais (CI, build estático).
 
 import { getPayload } from 'payload'
 import config from '@payload-config'
@@ -33,6 +38,33 @@ import { CARDAPIO, CONFIGURACOES, CRONOLOGIA, INFORMES, richText } from '@/conte
 async function seed() {
   const log = (msg: string) => console.log(msg)
   const payload = await getPayload({ config })
+
+  // Primeiro usuário admin (acesso ao painel `/admin`). Cria apenas se o
+  // e-mail ainda não existir; nunca sobrescreve a senha de um usuário já
+  // cadastrado. A senha nunca é logada.
+  const adminEmail = process.env.SEED_ADMIN_EMAIL
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD
+  if (!adminEmail || !adminPassword) {
+    log('[seed] usuário admin não criado (SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD ausentes)')
+  } else {
+    const { totalDocs } = await payload.find({
+      collection: 'users',
+      where: { email: { equals: adminEmail } },
+      limit: 0,
+      depth: 0,
+    })
+    if (totalDocs > 0) {
+      log(`[seed] usuário admin já existe: ${adminEmail} (senha não alterada)`)
+    } else {
+      await payload.create({
+        collection: 'users',
+        // `role` é required na coleção (e o default seria 'cliente') — o seed
+        // precisa gravar 'admin' explicitamente para o usuário acessar /admin.
+        data: { email: adminEmail, password: adminPassword, role: 'admin' },
+      })
+      log(`[seed] usuário admin criado: ${adminEmail}`)
+    }
+  }
 
   // Idempotência (Req 9.1): apaga tudo antes de reinserir. `where` com um
   // predicado sempre-verdadeiro (`id exists`) casa todos os documentos.

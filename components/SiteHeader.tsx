@@ -19,9 +19,8 @@
 // um painel vertical dentro do header. O painel fecha ao trocar de rota, ao
 // clicar num link e via tecla Escape.
 //
-// Mobile: "Entrar" à esquerda, logo CENTRALIZADO (posicionamento absoluto,
-// fora do fluxo) e hamburger à direita. O "Entrar" NÃO aparece no painel
-// hamburger — já está visível na barra.
+// Mobile: hamburger à esquerda e logo alinhado à DIREITA. O "Entrar" NÃO
+// aparece na barra — fica dentro do painel hamburger, ao final da lista.
 //
 // Acessibilidade: landmark <nav> com `aria-label`, links com nomes acessíveis
 // e `aria-current="page"` no item ativo (Req 20.2, 20.3). O botão hamburger tem
@@ -89,19 +88,44 @@ export function SiteHeader(): ReactElement {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-borda bg-papel/80 backdrop-blur">
-      {/* `min-h-20` no mobile: como o logo é absoluto (fora do fluxo), a
-          altura mínima garante que a barra acomode os 56px do logo + py-3. */}
-      <div className="relative mx-auto flex min-h-20 w-full max-w-conteudo items-center justify-between gap-x-6 px-6 py-3 md:min-h-0">
+      <div className="mx-auto flex w-full max-w-conteudo items-center justify-between gap-x-6 px-6 py-3">
+        {/* Botão hamburger — somente mobile (< md). Ícone SVG decorativo:
+            3 barras quando fechado, X quando aberto. No mobile é o primeiro
+            item do fluxo, então fica à ESQUERDA (logo à direita). */}
+        <button
+          type="button"
+          aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
+          aria-expanded={menuAberto}
+          aria-controls="menu-mobile"
+          onClick={() => setMenuAberto((aberto) => !aberto)}
+          className="text-marrom hover-verde -ml-2 p-2 transition-colors md:hidden"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            className="h-6 w-6"
+          >
+            {menuAberto ? (
+              <path d="M6 6l12 12M18 6L6 18" />
+            ) : (
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            )}
+          </svg>
+        </button>
+
         {/* Logo como link para a home. Altura limitada: 56px no mobile, 88px
             (Req 18.4) no desktop; dimensões intrínsecas reais (711×485) +
             `w-auto` preservam a proporção. É o nome do site, então recebe um
-            alt significativo. No mobile fica CENTRALIZADO via posicionamento
-            absoluto (fora do fluxo), entre o "Entrar" (esquerda) e o
-            hamburger (direita). */}
+            alt significativo. No mobile fica à DIREITA (o hamburger é o
+            primeiro item do fluxo e o `justify-between` separa os dois). */}
         <Link
           href="/"
           aria-label="Capão Grande — página inicial"
-          className="absolute left-1/2 shrink-0 -translate-x-1/2 md:static md:translate-x-0"
+          className="shrink-0"
         >
           <Watercolor
             name="logo"
@@ -135,39 +159,17 @@ export function SiteHeader(): ReactElement {
         </nav>
 
         {/* Botão "Entrar" — ação (não é item de conteúdo, então fica fora de
-            NAV_ITEMS e sem aria-current). Desktop: botão compacto à direita,
-            colado na nav; mobile: primeiro item no fluxo (o logo é absoluto e
-            a nav está oculta), então o `justify-between` o deixa à ESQUERDA. */}
-        <Link href="/login" className="btn-primario px-3 py-1.5 text-[0.95rem]">
-          Entrar
-        </Link>
-
-        {/* Botão hamburger — somente mobile (< md). Ícone SVG decorativo:
-            3 barras quando fechado, X quando aberto. */}
-        <button
-          type="button"
-          aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
-          aria-expanded={menuAberto}
-          aria-controls="menu-mobile"
-          onClick={() => setMenuAberto((aberto) => !aberto)}
-          className="text-marrom hover-verde -mr-2 p-2 transition-colors md:hidden"
-        >
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            className="h-6 w-6"
-          >
-            {menuAberto ? (
-              <path d="M6 6l12 12M18 6L6 18" />
-            ) : (
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            )}
-          </svg>
-        </button>
+            NAV_ITEMS e sem aria-current). Somente desktop: botão compacto à
+            direita, colado na nav; no mobile ele aparece dentro do painel
+            hamburger (ver abaixo). A visibilidade fica num wrapper SEM
+            `btn-primario`: essa classe é CSS não-layered com `display:
+            inline-flex`, que venceria o `hidden` do Tailwind no mesmo
+            elemento e manteria o botão visível no mobile. */}
+        <div className="hidden md:block">
+          <Link href="/login" className="btn-primario px-3 py-1.5 text-[0.95rem]">
+            Entrar
+          </Link>
+        </div>
       </div>
 
       {/* Painel do menu mobile (somente quando aberto; some a partir de `md`).
@@ -194,6 +196,17 @@ export function SiteHeader(): ReactElement {
                 </li>
               )
             })}
+            {/* "Entrar" — no mobile fica dentro do painel hamburger, ao final
+                da lista; fecha o painel no clique como os demais links. */}
+            <li>
+              <Link
+                href="/login"
+                onClick={() => setMenuAberto(false)}
+                className="btn-primario mt-2 self-start px-3 py-1.5"
+              >
+                Entrar
+              </Link>
+            </li>
           </ul>
         </nav>
       ) : null}

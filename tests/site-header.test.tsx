@@ -102,6 +102,10 @@ describe('<SiteHeader> — menu hamburger mobile', () => {
     expect(links.map((a) => a.textContent)).toContain('Processo')
     const inicio = links.find((a) => a.textContent === 'Início')
     expect(inicio?.getAttribute('aria-current')).toBe('page')
+
+    // No mobile o "Entrar" fica dentro do painel hamburger.
+    const entrar = links.find((a) => a.textContent === 'Entrar')
+    expect(entrar?.getAttribute('href')).toBe('/login')
   })
 
   it('fecha ao clicar novamente no botão', () => {
