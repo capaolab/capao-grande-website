@@ -7,7 +7,8 @@
 //         <Placeholder> quando `whatsapp` está ausente/"a confirmar". Aponta
 //         também para o formulário online `/pedido` (docs/features/
 //         delivery-pedidos.md, Tarefa 2): o atendente pode enviar o link do
-//         formulário na conversa (RN01 — o funil começa no WhatsApp).
+//         formulário na conversa; o link do formulário fica num bloco
+//         destacado com botão primário (RN01 revisada).
 //      2. Pagamento por Pix com QR — chave Pix (ou <Placeholder>) + imagem do
 //         QR via <CmsImage> (que exibe placeholder listrado quando `qrPix`
 //         está ausente) (Req 15.2, 15.3).
@@ -30,6 +31,7 @@ import type { ReactElement } from 'react'
 import Link from 'next/link'
 
 import { CmsImage } from '@/components/CmsImage'
+import { SetaAcao } from '@/components/PedidoCta'
 import { Placeholder } from '@/components/Placeholder'
 import { StepList, type Step } from '@/components/StepList'
 import { isAConfirmar } from '@/lib/design/placeholder'
@@ -140,16 +142,22 @@ export default async function DeliveryPage(): Promise<ReactElement> {
             {cfg.whatsapp as string}
           </a>
         )}
-        <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
-          Na conversa, o atendente pode enviar o link do nosso formulário de pedido — você
-          também pode montar o pedido online e informar o código no WhatsApp.
-        </p>
-        <Link
-          href="/pedido"
-          className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors"
-        >
-          Montar pedido online
-        </Link>
+        {/* Atalho para o formulário: bloco destacado (filete oliva + fundo)
+            com botão primário — distinto do link do WhatsApp acima, para
+            ficar claro que leva ao formulário de pedido. */}
+        <div className="flex w-full flex-col gap-3 rounded-[var(--radius)] border-l-4 border-[color:var(--color-oliva)] bg-[color:var(--color-fundo)] p-4">
+          <p className="font-serif text-lg text-[color:var(--color-marrom)]">
+            Prefere montar o pedido online?
+          </p>
+          <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
+            Escolha os itens no formulário, marque o local de entrega e envie. Depois é só
+            informar o código do pedido no WhatsApp.
+          </p>
+          <Link href="/pedido" className="btn-primario group w-fit gap-2">
+            Abrir formulário de pedido
+            <SetaAcao />
+          </Link>
+        </div>
       </div>
     ),
   }

@@ -2,14 +2,19 @@ import type { PayloadHandler } from 'payload'
 
 import { validarPedido, type ItemPedidoEntrada, type PedidoInput } from '@/lib/pedidos'
 
-// Endpoint público de submissão de pedidos de delivery
+import { criarRateLimit, ehHoneypot, ipDoCliente } from './protecao'
+
+// Endpoint de submissão de pedidos de delivery
 // (docs/features/delivery-pedidos.md, Tarefa 4) — POST /api/submeter-pedido.
 //
 // Fluxo:
+//   0) Sessão obrigatória (RN12): sem usuário autenticado (cookie
+//      `payload-token`) → 401. A UI (/pedido) já exige login via
+//      AreaInternaGuard; aqui a regra é garantida no servidor.
 //   a) Honeypot anti-spam (P7): se o campo `website` vier preenchido (bots
 //      preenchem campos invisíveis), respondemos 201 FALSO sem gravar nada.
-//   b) Rate limit em memória por IP (P7): no máximo LIMITE_SUBMISSOES por
-//      JANELA_RATE_LIMIT_MS; excedido → 429.
+//   b) Rate limit em memória por IP (P7, src/endpoints/protecao.ts);
+//      excedido → 429.
 //   c) Validação server-side dos campos obrigatórios (RN06, RN07) via
 //      `validarPedido` (função pura de lib/pedidos.ts).
 //   d) Criação via Local API: os hooks da collection `pedidos` geram o código
@@ -18,35 +23,18 @@ import { validarPedido, type ItemPedidoEntrada, type PedidoInput } from '@/lib/p
 //   e) Sucesso → 201 { id, codigo, subtotal } (o subtotal é só dos produtos;
 //      o frete é informado depois pelo atendente via mensagem — RN08).
 
-// Rate limit por IP (P7). Constantes no topo para ajuste operacional.
-const LIMITE_SUBMISSOES = 5
-const JANELA_RATE_LIMIT_MS = 10 * 60 * 1000 // 10 minutos
-
-// Timestamps das submissões recentes por IP. Em memória: suficiente para a v1
-// (instância única); zera a cada restart, o que é aceitável para mitigação.
-const submissoesPorIp = new Map<string, number[]>()
-
-function ipDoCliente(req: { headers: Headers }): string {
-  // Atrás de proxy (Vercel), o IP real vem em x-forwarded-for (primeiro da
-  // lista). Sem proxy, caímos num bucket compartilhado.
-  const encaminhado = req.headers.get('x-forwarded-for')
-  return encaminhado?.split(',')[0]?.trim() || 'desconhecido'
-}
-
-function dentroDoLimite(ip: string, agora: number): boolean {
-  const recentes = (submissoesPorIp.get(ip) ?? []).filter(
-    (instante) => agora - instante < JANELA_RATE_LIMIT_MS,
-  )
-  if (recentes.length >= LIMITE_SUBMISSOES) {
-    submissoesPorIp.set(ip, recentes)
-    return false
-  }
-  recentes.push(agora)
-  submissoesPorIp.set(ip, recentes)
-  return true
-}
+// Rate limit por IP (P7): no máximo 5 submissões por 10 minutos.
+const dentroDoLimite = criarRateLimit(5)
 
 export const submeterPedido: PayloadHandler = async (req) => {
+  // (0) Login obrigatório para registrar pedidos (RN12).
+  if (!req.user) {
+    return Response.json(
+      { erros: ['Entre na sua conta para enviar o pedido.'] },
+      { status: 401 },
+    )
+  }
+
   let corpo: PedidoInput & { website?: unknown }
   try {
     // PayloadRequest tipa Request como Partial<>; em runtime `json` sempre
@@ -58,7 +46,7 @@ export const submeterPedido: PayloadHandler = async (req) => {
 
   // (a) Honeypot: campo invisível preenchido ⇒ bot. Resposta 201 FALSA, sem
   // gravar nada, para não sinalizar ao bot que foi detectado.
-  if (typeof corpo.website === 'string' && corpo.website.trim() !== '') {
+  if (ehHoneypot(corpo)) {
     return Response.json({ recebido: true }, { status: 201 })
   }
 

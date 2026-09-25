@@ -40,18 +40,25 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # DATABASE_URI/PAYLOAD_SECRET are only read to build the Payload config
-# object at build time (no DB connection is made) so build-time
-# placeholders are fine; real values are supplied at runtime.
-ARG DATABASE_URI=postgres://placeholder:placeholder@localhost:5432/placeholder
-ARG PAYLOAD_SECRET=placeholder-build-secret
-ENV DATABASE_URI=${DATABASE_URI}
-ENV PAYLOAD_SECRET=${PAYLOAD_SECRET}
-RUN npm run build
+# object at build time. No DB connection is made: every CMS read calls
+# `connection()` (lib/payload.ts), so pages render per request instead of
+# being prerendered against the database. Placeholders are set only for this
+# RUN (no ARG/ENV), so real secrets can't be baked in via build args — this
+# image is published to the registry (.github/workflows/release.yml). Real
+# values come at runtime.
+RUN DATABASE_URI=postgres://placeholder:placeholder@localhost:5432/placeholder \
+    PAYLOAD_SECRET=placeholder-build-secret \
+    npm run build
 
 # ---- Production ----
 # Runs the Next.js standalone server produced by `output: "standalone"`.
+# Pending migrations (src/migrations) are applied on startup by Payload's
+# `prodMigrations` (src/payload.config.ts).
 FROM base AS runner
 ENV NODE_ENV=production
+# Uploads dir (Payload `media` collection), owned by "node" so a named
+# volume mounted here starts writable.
+RUN mkdir -p /app/media && chown node:node /app/media
 
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./

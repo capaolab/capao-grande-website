@@ -5,7 +5,7 @@
 // `Papel` espelha as options do campo `role` de src/collections/Users.ts —
 // mantido como string union local (e não importado de payload-types) para que
 // este módulo funcione em qualquer contexto, inclusive no build estático de
-// staging (CONTENT_SOURCE=static), que não pode puxar a cadeia do Payload.
+// preview (CONTENT_SOURCE=static), que não pode puxar a cadeia do Payload.
 
 /** Papéis de usuário do sistema (espelha `role` em src/collections/Users.ts). */
 export type Papel = 'admin' | 'funcionario' | 'cliente'
@@ -51,4 +51,28 @@ export function podeAcessarArea(
 ): boolean {
   if (role === 'admin') return true
   return role === area
+}
+
+/** Parâmetro de query com a rota de retorno pós-login (ex.: `/login?next=/pedido`). */
+export const PARAM_RETORNO = 'next'
+
+/**
+ * Valida a rota de retorno recebida por query string e a devolve apenas se
+ * for um caminho INTERNO do site (começa com `/`, sem `//` nem `\` — que o
+ * navegador trataria como outro host). Qualquer outra coisa ⇒ null, evitando
+ * open redirect.
+ */
+export function rotaDeRetorno(valor: string | null | undefined): string | null {
+  if (typeof valor !== 'string') return null
+  if (!valor.startsWith('/') || valor.startsWith('//')) return null
+  if (valor.includes('\\')) return null
+  return valor
+}
+
+/** Anexa a rota de retorno (validada) a um caminho, ex.: `/login?next=%2Fpedido`. */
+export function comRetorno(caminho: string, retorno: string | null | undefined): string {
+  const seguro = rotaDeRetorno(retorno)
+  if (!seguro) return caminho
+  const separador = caminho.includes('?') ? '&' : '?'
+  return `${caminho}${separador}${PARAM_RETORNO}=${encodeURIComponent(seguro)}`
 }

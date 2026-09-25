@@ -6,19 +6,21 @@
 // (`POST /api/users/login`), que define o cookie httpOnly `payload-token` na
 // resposta. Em seguida redireciona conforme o papel do usuário
 // (lib/permissoes.ts): admin -> /admin, funcionario -> /area-funcionario,
-// cliente -> /area-cliente.
+// cliente -> /area-cliente. Com `?next=<rota interna>` (ex.: /pedido, vindo
+// do AreaInternaGuard), volta para essa rota em vez da área do papel — a rota
+// é validada por `rotaDeRetorno` (sem open redirect).
 //
 // Ao montar, checa `/api/users/me`: quem já tem sessão válida é redirecionado
 // direto para a sua área, sem ver o formulário.
 //
-// Build estático de staging: lá a API não existe — o fetch falha ou responde
+// Build estático de preview: lá a API não existe — o fetch falha ou responde
 // 404; ambos os casos caem na mensagem de indisponibilidade, sem quebrar a
 // página.
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react'
 
-import { rotaPorRole } from '@/lib/permissoes'
+import { PARAM_RETORNO, rotaDeRetorno, rotaPorRole } from '@/lib/permissoes'
 
 const ERRO_CREDENCIAIS = 'E-mail ou senha incorretos.'
 const ERRO_INDISPONIVEL =
@@ -26,6 +28,7 @@ const ERRO_INDISPONIVEL =
 
 export function LoginForm(): ReactElement {
   const router = useRouter()
+  const retorno = rotaDeRetorno(useSearchParams().get(PARAM_RETORNO))
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string | null>(null)
@@ -38,15 +41,15 @@ export function LoginForm(): ReactElement {
       .then(async (res) => {
         if (!ativo || !res.ok) return
         const dados = (await res.json()) as { user?: { role?: string } | null }
-        if (dados.user) router.replace(rotaPorRole(dados.user.role))
+        if (dados.user) router.replace(retorno ?? rotaPorRole(dados.user.role))
       })
       .catch(() => {
-        // Sem API (staging estático) ou offline: permanece no formulário.
+        // Sem API (preview estático) ou offline: permanece no formulário.
       })
     return () => {
       ativo = false
     }
-  }, [router])
+  }, [retorno, router])
 
   async function aoSubmeter(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
@@ -67,7 +70,7 @@ export function LoginForm(): ReactElement {
       }
 
       const dados = (await res.json()) as { user?: { role?: string } | null }
-      router.push(rotaPorRole(dados.user?.role))
+      router.push(retorno ?? rotaPorRole(dados.user?.role))
     } catch {
       setErro(ERRO_INDISPONIVEL)
     } finally {
@@ -81,6 +84,13 @@ export function LoginForm(): ReactElement {
       className="borda-sistema bg-papel flex w-full flex-col gap-4 rounded-lg p-6"
       noValidate
     >
+      {retorno === '/pedido' ? (
+        <p className="font-sans text-sm text-paragrafo">
+          Entre na sua conta para fazer seu pedido. Ainda não tem conta? Cadastre-se
+          abaixo — leva um minuto.
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-1">
         <label htmlFor="login-email" className="font-sans font-medium text-marrom">
           E-mail

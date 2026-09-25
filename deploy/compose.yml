@@ -1,0 +1,45 @@
+# Deploy da imagem publicada pelo workflow release.yml — staging e produção.
+#
+# Só o app: o Postgres é um container COMPARTILHADO do servidor (usado por
+# várias aplicações), alcançado por uma rede Docker externa. Cada ambiente
+# tem o seu arquivo de variáveis (.env.staging, .env.production) e o seu
+# nome de projeto, então os dois podem coexistir no mesmo host.
+#
+# Uso (ou via ./deploy/deploy.sh <ambiente> <versão>):
+#   IMAGE_TAG=1.2.0 ENV_FILE=.env.staging docker compose -f deploy/compose.yml \
+#     --env-file deploy/.env.staging -p capao-staging up -d
+
+services:
+  app:
+    image: "ghcr.io/capaolab/capao-grande-website:${IMAGE_TAG:?defina IMAGE_TAG, ex. 1.2.0}"
+    env_file: ${ENV_FILE:-.env.staging}
+    environment:
+      NODE_ENV: production
+    ports:
+      # Porta do host por ambiente (ex.: staging 3100, produção 3000).
+      - "${APP_PORT:-3100}:3000"
+    volumes:
+      # Uploads do Payload (collection `media`): persistem entre versões.
+      - uploads:/app/media
+    networks:
+      - db
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      # Primeira subida aplica migrations pendentes (prodMigrations).
+      start_period: 60s
+
+volumes:
+  uploads:
+
+networks:
+  db:
+    external: true
+    name: ${DB_NETWORK:-shared-db}

@@ -104,6 +104,14 @@ vi.mock('next/navigation', () => ({
   },
 }))
 
+// <AreaInternaGuard> → pass-through: simula usuário LOGADO em `/pedido`
+// (login obrigatório, RN12), para que o axe audite o formulário real e não o
+// estado "Verificando acesso…". O redirect sem sessão é coberto em
+// tests/area-interna-guard.test.tsx.
+vi.mock('@/components/AreaInternaGuard', () => ({
+  AreaInternaGuard: ({ children }: { children: ReactNode }) => <>{children}</>,
+}))
+
 // `RichText` do lexical → <div> simples: aqui só precisamos de um bloco de
 // conteúdo válido para o axe; a conversão real de rich text não é o objeto do
 // teste de acessibilidade.
@@ -227,6 +235,31 @@ const CONFIGURACOES: Configuracoe = {
   createdAt: '2024-01-01T00:00:00.000Z',
 } as unknown as Configuracoe
 
+// Catálogo de pimenta em mel: um produto com preço de lote e um sem.
+const PRODUTOS_PIMENTA = [
+  {
+    id: 1,
+    nome: 'Pimenta em mel',
+    volume: '150 ml',
+    descricao: 'Frasco de vidro.',
+    preco: 25,
+    precoLote: 20,
+    loteMinimo: 12,
+    imagem: null,
+    ativo: true,
+    updatedAt: '2026-09-25T00:00:00.000Z',
+    createdAt: '2026-09-25T00:00:00.000Z',
+  },
+  {
+    id: 2,
+    nome: 'Pote',
+    preco: 40,
+    ativo: true,
+    updatedAt: '2026-09-25T00:00:00.000Z',
+    createdAt: '2026-09-25T00:00:00.000Z',
+  },
+]
+
 vi.mock('@/lib/queries', () => ({
   getInformeDestaque: vi.fn(async () => DESTAQUE),
   getInformesRecentes: vi.fn(async () => RECENTES),
@@ -251,6 +284,7 @@ vi.mock('@/lib/queries', () => ({
   getCardapioAgrupado: vi.fn(async () => CARDAPIO),
   getCronologia: vi.fn(async () => CRONOLOGIA),
   getConfiguracoes: vi.fn(async () => CONFIGURACOES),
+  getProdutosPimenta: vi.fn(async () => PRODUTOS_PIMENTA),
 }))
 
 // Importa as páginas DEPOIS dos mocks (hoisting do vi.mock cobre os módulos,
@@ -262,6 +296,8 @@ import PizzariaPage from '../app/(frontend)/pizzaria/page'
 import CardapioPage from '../app/(frontend)/cardapio/page'
 import DeliveryPage from '../app/(frontend)/delivery/page'
 import PedidoPage from '../app/(frontend)/pedido/page'
+import PimentaEmMelPage from '../app/(frontend)/pimenta-em-mel/page'
+import PedidoPimentaPage from '../app/(frontend)/pimenta-em-mel/pedido/page'
 import ProcessoPage from '../app/(frontend)/processo/page'
 import SobrePage from '../app/(frontend)/sobre/page'
 import NotFound from '../app/(frontend)/not-found'
@@ -338,6 +374,18 @@ describe('Acessibilidade (axe) das páginas públicas — Req 20.1, 20.2, 20.4',
   // protegida (try/catch), degradando sem quebrar a renderização em jsdom.
   it('`/pedido` (formulário de delivery) não tem violações de axe', async () => {
     const ui = await PedidoPage()
+    const { container } = renderPagina(ui)
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
+  })
+
+  it('`/pimenta-em-mel` (página do produto) não tem violações de axe', async () => {
+    const ui = await PimentaEmMelPage()
+    const { container } = renderPagina(ui)
+    expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
+  })
+
+  it('`/pimenta-em-mel/pedido` (formulário) não tem violações de axe', async () => {
+    const ui = await PedidoPimentaPage()
     const { container } = renderPagina(ui)
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
   })

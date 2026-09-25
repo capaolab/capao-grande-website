@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-// scripts/build-static.mjs — build estático de staging (npm run build:static).
+// scripts/build-static.mjs — build estático de preview (npm run build:static).
 //
 // Roda `next build` com `CONTENT_SOURCE=static` (lib/queries.ts e
 // next.config.ts passam a usar content/static-content.ts em vez do Payload
-// Local API — Req do ambiente de staging na Vercel) e com o grupo de rotas
+// Local API — Req do ambiente de preview na Vercel) e com o grupo de rotas
 // `app/(payload)` temporariamente MOVIDO PARA FORA de `app/`: admin e API
 // REST/GraphQL do Payload são inerentemente dinâmicos e incompatíveis com
 // `output: 'export'` (next.config.ts). O diretório é sempre restaurado no
 // final, inclusive se o build falhar — este script é usado tanto localmente
-// quanto (de forma equivalente, ver .github/workflows/deploy-staging.yml)
-// no CI de deploy do staging.
+// quanto (de forma equivalente, ver .github/workflows/deploy-preview.yml)
+// no CI de deploy do preview.
 //
 // Não precisa de DATABASE_URI nem PAYLOAD_SECRET: com `(payload)` fora da
 // árvore de rotas e `CONTENT_SOURCE=static`, nada no grafo de módulos do

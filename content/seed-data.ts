@@ -5,8 +5,8 @@
 //   1. scripts/seed.ts: insere estes dados num Postgres real via Payload
 //      Local API (fluxo de desenvolvimento/Docker).
 //   2. content/static-content.ts: resolve estes mesmos dados em memória para
-//      o build estático de staging (`CONTENT_SOURCE=static`), sem Payload nem
-//      banco — ver AGENTS.md/README sobre o ambiente de staging na Vercel.
+//      o build estático de preview (`CONTENT_SOURCE=static`), sem Payload nem
+//      banco — ver AGENTS.md/README sobre o ambiente de preview na Vercel.
 //
 // Nenhum dado real de contato/endereço/Pix é inventado (Req 9.4): tudo que é
 // desconhecido usa o marcador literal "a confirmar" (A_CONFIRMAR).

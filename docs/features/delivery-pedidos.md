@@ -42,10 +42,15 @@ na conversa.
 
 ## REGRAS DE NEGÓCIO
 
-- RN01 — A origem do pedido é sempre o WhatsApp: o link do formulário é enviado
-  na conversa, por atendimento humano ou bot. O formulário não dispensa nem
-  automatiza a conversa. (Por isso `/pedido` **não entra na navegação global**:
-  a entrada é via link direto.)
+- RN01 — ~~A origem do pedido é sempre o WhatsApp~~ **REVISADA (2026-09-25):**
+  o fluxo continua **gerenciado pelo WhatsApp**, mas o pedido pode **começar no
+  site**: o cliente acessa o site (CTA da home `<PedidoCta>` ou bloco destacado
+  no passo 1 de `/delivery`), monta o pedido em `/pedido` e **só depois**
+  informa o código na conversa (botão `wa.me` da confirmação). O link do
+  formulário também pode ser enviado na conversa, como antes. Preço final,
+  frete e confirmação continuam no WhatsApp; `/pedido` segue **fora da
+  navegação global** (SiteHeader). Pedido registrado sem comunicação no
+  WhatsApp fica `pendente` — ver P9.
 - RN02 — O formulário lista **todos os itens ativos do cardápio** (collection
   `cardapio`, filtrados por `ativo = true`, agrupados nas seções canônicas
   Pizzas, Tamanhos, Bebidas e Vinhos — ver `lib/cardapio.ts`).
@@ -61,17 +66,31 @@ na conversa.
 - RN07 — A **geolocalização de entrega é obrigatória** e capturada em um clique
   (Geolocation API do navegador + mapa Leaflet/OpenStreetMap com pin ajustável).
   Não há campo de endereço formal; um campo textual **opcional** registra
-  indicação de localidade/ponto de referência.
+  indicação de localidade/ponto de referência. Quando o cliente salvou uma
+  localização no perfil, o pin e a referência já vêm preenchidos e continuam
+  editáveis (ver pimenta-em-mel.md, RN-P07).
 - RN08 — O formulário exibe apenas o **preço parcial dos produtos**. O frete não
   é calculado no formulário; a interface deve indicar explicitamente que o
   **preço final (produtos + frete) será informado pelo atendente via mensagem**.
-- RN09 — O status do pedido é **interno** (organização do atendente) e **não é
-  exposto ao cliente**. Toda comunicação sobre andamento e entrega é feita via
-  mensagem.
+- RN09 — ~~O status do pedido é **interno**~~ **REVOGADA por
+  `docs/features/dashboard-pedidos.md` (RN-D02):** o status passou a ser
+  visível ao cliente dono do pedido no dashboard `/area-cliente`, com rótulos
+  amigáveis. A comunicação detalhada (preço final com frete, confirmações)
+  continua via WhatsApp.
 - RN10 — Itens inativos do cardápio nunca aparecem no formulário.
 - RN11 — Nenhum dado é fabricado: se o cardápio estiver vazio ou indisponível, o
   formulário informa a indisponibilidade em vez de exibir itens fictícios
   (alinhado ao Requisito 19 do projeto).
+- RN12 — **Login obrigatório para pedir (2026-09-25).** Antes de exibir o
+  formulário `/pedido`, o sistema verifica a sessão; sem login, o usuário vai
+  para `/login?next=/pedido` (com atalho para `/cadastro`, que preserva o
+  retorno) e, ao entrar ou se cadastrar, volta ao formulário. Vale para todas as
+  entradas (CTA da home, `/delivery`, link enviado no WhatsApp). Nome e telefone
+  vêm pré-preenchidos com os dados da conta (editáveis). No servidor,
+  `/api/submeter-pedido` responde 401 sem sessão e o `create` da collection
+  `pedidos` exige usuário autenticado. A rota de retorno é validada (só
+  caminhos internos — sem open redirect). Staging estático: sem API nem login,
+  `/pedido` mantém o aviso de indisponibilidade.
 
 ## PROBLEMAS E MELHORIAS IDENTIFICADOS
 
@@ -112,6 +131,15 @@ Pontos levantados na análise do processo e decisões tomadas:
 - **P8 — Pedidos fora do horário de funcionamento.** **Implementado:** o
   formulário exibe os horários de funcionamento vindos do CMS quando válidos
   (sem fabricar quando "a confirmar") — sem bloquear a submissão na v1.
+- **P9 — Cliente registra o pedido no site e esquece de avisar no WhatsApp.**
+  Consequência da RN01 revisada: o pedido fica `pendente` sem conversa aberta.
+  **Mitigação atual:** a confirmação diz explicitamente que o envio do código no
+  WhatsApp é o último passo e que o pedido só é confirmado depois dele; o
+  atendente vê os `pendente` do dia no dashboard `/area-funcionario` (nome e
+  telefone obrigatórios, RN06) e pode chamar o cliente. **Futuro:** automação de
+  callback — contatar automaticamente o cliente quando um pedido fica
+  `pendente` sem comunicação no WhatsApp após um intervalo (fora de escopo
+  nesta versão).
 
 ## TAREFAS
 
@@ -271,6 +299,9 @@ revogação do antigo Requisito 6.3.
   integração DB-backed foram atualizados para o novo modelo de preço, mas só
   rodam com o banco de pé. Se já existir banco com preços em texto, é preciso
   migração/reseed dos dados do cardápio.
+
+- **Futuro (P9):** automação de callback para pedidos `pendente` sem
+  comunicação no WhatsApp — a definir (gatilho, intervalo, canal/bot).
 
 ## REFERÊNCIAS
 

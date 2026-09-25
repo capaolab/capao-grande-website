@@ -60,7 +60,15 @@ async function seed() {
         collection: 'users',
         // `role` é required na coleção (e o default seria 'cliente') — o seed
         // precisa gravar 'admin' explicitamente para o usuário acessar /admin.
-        data: { email: adminEmail, password: adminPassword, role: 'admin' },
+        // Nome/sobrenome identificam o titular na operação (não são
+        // obrigatórios para admin, mas o cadastro de cliente os exige).
+        data: {
+          email: adminEmail,
+          password: adminPassword,
+          role: 'admin',
+          nome: 'Administrador',
+          sobrenome: 'Capão Grande',
+        },
       })
       log(`[seed] usuário admin criado: ${adminEmail}`)
     }

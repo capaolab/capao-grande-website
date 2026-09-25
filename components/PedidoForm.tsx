@@ -4,7 +4,8 @@
 // (docs/features/delivery-pedidos.md, Tarefas 2 e 4; RN03, RN06, RN07, RN08).
 //
 // Estrutura:
-//  - Seletor de produtos tipo TAGS (RN03): itens agrupados por seção como
+//  - Seletor de produtos (<SeletorItensCardapio>, compartilhado com o caixa)
+//    tipo TAGS (RN03): itens agrupados por seção como
 //    chips selecionáveis (aria-pressed); a seção Tamanhos NÃO aparece como
 //    seção selecionável — seus itens são o seletor de tamanho das pizzas.
 //  - Resumo do pedido em montagem: cada item selecionado vira uma tag com
@@ -18,51 +19,47 @@
 //    `calcularSubtotal` de lib/pedidos.ts + aviso de que o frete/valor final
 //    será informado pelo atendente na conversa.
 //
+// Login obrigatório (RN12): a página envolve o formulário no AreaInternaGuard;
+// aqui nome, telefone e — quando salvos no perfil (pimenta-em-mel.md,
+// RN-P07) — ponto no mapa e localidade são pré-preenchidos com os dados da
+// conta (`/api/users/me`) e continuam editáveis. 401 (sessão expirada) vira
+// mensagem com link para entrar de novo.
+//
 // Submissão: POST /api/submeter-pedido. Erros 400/429 e falhas de rede são
 // exibidos SEM perder o conteúdo do formulário. Sucesso substitui o
 // formulário pela tela de confirmação com o código público do pedido e o
-// botão de retorno à conversa no WhatsApp (P2).
+// botão de retorno à conversa no WhatsApp (P2), mais o atalho para
+// "Meus pedidos" (/area-cliente) — que lista os pedidos pelo telefone da
+// conta, então avisamos quando o pedido usou outro telefone.
 //
 // Acessibilidade: nenhum <h1> aqui (fica na página); labels associados por
 // htmlFor/id; erros inline com role/aria-describedby; regiões aria-live no
 // resumo e no subtotal; chips são <button> com aria-pressed e os tamanhos
 // são radios nativos (navegáveis por teclado).
 
-import { useMemo, useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
+import Link from 'next/link'
 
-import { renderPreco, type SecaoCardapio } from '@/lib/cardapio'
-import { calcularSubtotal, type ItemCardapioMinimo, type ItemPedidoEntrada } from '@/lib/pedidos'
+import { buscarUsuarioAtual } from '@/lib/auth-client'
+import { renderPreco } from '@/lib/cardapio'
+import { comRetorno, ROTA_CLIENTE, ROTA_LOGIN } from '@/lib/permissoes'
+import { normalizarTelefone } from '@/lib/telefone'
 import { PedidoMapa, type PontoEntrega } from './PedidoMapa'
+import {
+  paraEntradas,
+  SeletorItensCardapio,
+  useSelecaoCardapio,
+  type ItemSelecionado,
+  type SecaoPedido,
+} from './SeletorItensCardapio'
 
-/** Item do cardápio no formato serializável recebido da página (Server → Client). */
-export interface ItemCardapioPedido {
-  id: number
-  nome: string
-  detalhe: string | null
-  /** `null` = pizza (preço resolvido pelo tamanho escolhido). */
-  preco: number | null
-}
-
-/** Seção do cardápio com os itens selecionáveis (forma serializável). */
-export interface SecaoPedido {
-  secao: SecaoCardapio
-  itens: ItemCardapioPedido[]
-}
+export type { ItemCardapioPedido, SecaoPedido } from './SeletorItensCardapio'
 
 export interface PedidoFormProps {
   /** Seções do cardápio (apenas itens ativos), na ordem canônica. */
   secoes: SecaoPedido[]
   /** Dígitos do WhatsApp da pizzaria (para o link wa.me da confirmação); null = omitir botão. */
   whatsappDigitos: string | null
-}
-
-/** Item selecionado no pedido em montagem. */
-interface ItemSelecionado {
-  /** Id do item do cardápio. */
-  id: number
-  quantidade: number
-  /** Id do tamanho escolhido — obrigatório para pizzas (preco: null). */
-  tamanhoId: number | null
 }
 
 /** Erros de validação do cliente, por campo (mensagens pt-BR inline). */
@@ -83,104 +80,43 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
   // nunca veem. Sempre enviado vazio por humanos.
   const [website, setWebsite] = useState('')
   const [ponto, setPonto] = useState<PontoEntrega | null>(null)
+  // Localização salva no perfil: vira o pin inicial do mapa.
+  const [pontoConta, setPontoConta] = useState<PontoEntrega | null>(null)
   const [errosCampos, setErrosCampos] = useState<ErrosCampos>({})
   const [errosGerais, setErrosGerais] = useState<string[]>([])
   const [enviando, setEnviando] = useState(false)
   const [confirmacao, setConfirmacao] = useState<{ codigo: string; subtotal: number } | null>(
     null,
   )
+  // Sessão expirada no envio (401): mostra o link para entrar de novo.
+  const [sessaoExpirada, setSessaoExpirada] = useState(false)
+  // Telefone da conta (normalizado): "Meus pedidos" lista por ele.
+  const [telefoneConta, setTelefoneConta] = useState<string | null>(null)
 
-  // Seções selecionáveis: Tamanhos nunca aparece como seção de chips — seus
-  // itens alimentam o seletor de tamanho DENTRO de cada pizza no resumo.
-  const secoesSelecionaveis = secoes.filter((s) => s.secao !== 'Tamanhos')
-  const tamanhos = secoes.find((s) => s.secao === 'Tamanhos')?.itens ?? []
-
-  // Mapa id → item, para resolver nome/preço sem percorrer as seções.
-  const itensPorId = useMemo(() => {
-    const mapa = new Map<number, ItemCardapioPedido>()
-    for (const secao of secoes) {
-      for (const item of secao.itens) mapa.set(item.id, item)
-    }
-    return mapa
-  }, [secoes])
-
-  // Subtotal PARCIAL no cliente (RN08), espelhando `calcularSubtotal` do
-  // servidor: só entram no cálculo os itens com preço resolvível (pizzas sem
-  // tamanho escolhido ficam fora até o cliente escolher).
-  const cardapioMinimo: ItemCardapioMinimo[] = useMemo(
-    () =>
-      secoes.flatMap((secao) =>
-        secao.itens.map((item) => ({
-          id: item.id,
-          secao: secao.secao,
-          nome: item.nome,
-          preco: item.preco,
-        })),
-      ),
-    [secoes],
-  )
-
-  const subtotal = useMemo(() => {
-    const entradas: ItemPedidoEntrada[] = selecionados
-      .filter((sel) => {
-        const item = itensPorId.get(sel.id)
-        return item && (item.preco != null || sel.tamanhoId != null)
-      })
-      .map((sel) => ({
-        item: sel.id,
-        quantidade: sel.quantidade,
-        ...(sel.tamanhoId != null ? { tamanho: sel.tamanhoId } : {}),
-      }))
-
-    const resultado = calcularSubtotal(entradas, cardapioMinimo)
-    return resultado.ok ? resultado.subtotal : 0
-  }, [selecionados, itensPorId, cardapioMinimo])
-
-  function estaSelecionado(id: number): boolean {
-    return selecionados.some((sel) => sel.id === id)
-  }
-
-  function alternarItem(item: ItemCardapioPedido) {
-    setSelecionados((atual) =>
-      estaSelecionado(item.id)
-        ? atual.filter((sel) => sel.id !== item.id)
-        : [...atual, { id: item.id, quantidade: 1, tamanhoId: null }],
-    )
-  }
-
-  function alterarQuantidade(id: number, delta: number) {
-    setSelecionados((atual) =>
-      atual.map((sel) =>
-        sel.id === id ? { ...sel, quantidade: Math.max(1, sel.quantidade + delta) } : sel,
-      ),
-    )
-  }
-
-  function alterarTamanho(id: number, tamanhoId: number) {
-    setSelecionados((atual) =>
-      atual.map((sel) => (sel.id === id ? { ...sel, tamanhoId } : sel)),
-    )
-  }
-
-  function removerItem(id: number) {
-    setSelecionados((atual) => atual.filter((sel) => sel.id !== id))
-  }
-
-  function precoExibido(sel: ItemSelecionado): number | null {
-    const item = itensPorId.get(sel.id)
-    if (!item) return null
-    if (item.preco != null) return item.preco
-    if (sel.tamanhoId != null) return itensPorId.get(sel.tamanhoId)?.preco ?? null
-    return null
-  }
-
-  /** Pizzas selecionadas sem tamanho escolhido (bloqueiam a submissão). */
-  function pizzasPendentes(): ItemSelecionado[] {
-    return selecionados.filter((sel) => {
-      const item = itensPorId.get(sel.id)
-      return item && item.preco == null && sel.tamanhoId == null
+  // Pré-preenche nome e telefone com os dados da conta (login obrigatório,
+  // RN12) sem sobrescrever o que o usuário já tiver digitado.
+  useEffect(() => {
+    let ativo = true
+    buscarUsuarioAtual().then((usuario) => {
+      if (!ativo || !usuario) return
+      const nomeConta = [usuario.nome, usuario.sobrenome].filter(Boolean).join(' ')
+      if (nomeConta) setNome((atual) => atual || nomeConta)
+      if (usuario.telefone) {
+        setTelefone((atual) => atual || (usuario.telefone as string))
+        setTelefoneConta(normalizarTelefone(usuario.telefone))
+      }
+      if (usuario.localidade) setLocalidade((atual) => atual || (usuario.localidade as string))
+      if (usuario.latitude != null && usuario.longitude != null) {
+        setPontoConta({ latitude: usuario.latitude, longitude: usuario.longitude })
+      }
     })
-  }
+    return () => {
+      ativo = false
+    }
+  }, [])
+
+  // Subtotal PARCIAL (RN08) e pizzas sem tamanho, espelhando o servidor.
+  const { subtotal, pizzasPendentes } = useSelecaoCardapio(secoes, selecionados)
 
   function validar(): ErrosCampos {
     const erros: ErrosCampos = {}
@@ -188,7 +124,7 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
     if (telefone.trim() === '') erros.telefone = 'Informe seu telefone (WhatsApp).'
     if (selecionados.length === 0) {
       erros.itens = 'Selecione ao menos um item do cardápio.'
-    } else if (pizzasPendentes().length > 0) {
+    } else if (pizzasPendentes.length > 0) {
       erros.itens = 'Escolha o tamanho de todas as pizzas do pedido.'
     }
     if (ponto == null) erros.localizacao = 'Marque o ponto de entrega no mapa.'
@@ -198,6 +134,7 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
   async function submeter(evento: React.FormEvent<HTMLFormElement>) {
     evento.preventDefault()
     setErrosGerais([])
+    setSessaoExpirada(false)
 
     const erros = validar()
     setErrosCampos(erros)
@@ -211,11 +148,7 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
         body: JSON.stringify({
           nome: nome.trim(),
           telefone: telefone.trim(),
-          itens: selecionados.map((sel) => ({
-            item: sel.id,
-            quantidade: sel.quantidade,
-            ...(sel.tamanhoId != null ? { tamanho: sel.tamanhoId } : {}),
-          })),
+          itens: paraEntradas(selecionados),
           latitude: ponto!.latitude,
           longitude: ponto!.longitude,
           ...(localidade.trim() !== '' ? { localidade: localidade.trim() } : {}),
@@ -232,6 +165,10 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
 
       if (resposta.status === 201 && dados.codigo) {
         setConfirmacao({ codigo: dados.codigo, subtotal: dados.subtotal ?? subtotal })
+      } else if (resposta.status === 401) {
+        // Sessão expirou enquanto montava o pedido: mantém o formulário.
+        setSessaoExpirada(true)
+        setErrosGerais(['Sua sessão expirou. Entre novamente para enviar o pedido.'])
       } else {
         // 400/429: exibe os erros do servidor SEM perder o formulário.
         setErrosGerais(
@@ -263,7 +200,10 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
           Pedido registrado
         </h2>
         <p className="font-sans text-[color:var(--color-paragrafo)]">
-          Anote o código do seu pedido e informe-o na conversa do WhatsApp:
+          <strong className="text-[color:var(--color-marrom)]">
+            Último passo: envie o código no WhatsApp.
+          </strong>{' '}
+          O pedido só é confirmado depois que você informa este código na conversa:
         </p>
         <p className="font-serif text-4xl tracking-wide text-[color:var(--color-verde)]">
           #{confirmacao.codigo}
@@ -289,6 +229,28 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
             Informar pedido no WhatsApp
           </a>
         ) : null}
+
+        {/* Follow-up (dashboard-pedidos.md): com login obrigatório (RN12) o
+            usuário já tem conta — atalho para acompanhar o status. "Meus
+            pedidos" lista pelo telefone da conta; avisa se este pedido usou
+            outro telefone. */}
+        <div className="mt-2 flex flex-col gap-2 border-t border-[color:var(--color-borda)] pt-4">
+          <p className="font-sans text-[color:var(--color-paragrafo)]">
+            Acompanhe o status deste e dos seus outros pedidos em &ldquo;Meus pedidos&rdquo;.
+          </p>
+          {telefoneConta && normalizarTelefone(telefone) !== telefoneConta ? (
+            <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
+              Este pedido usou um telefone diferente do cadastrado na sua conta, então
+              não aparecerá em &ldquo;Meus pedidos&rdquo;.
+            </p>
+          ) : null}
+          <Link
+            href={ROTA_CLIENTE}
+            className="hover-verde w-fit font-sans text-[color:var(--color-marrom)] underline transition-colors"
+          >
+            Ver meus pedidos
+          </Link>
+        </div>
       </section>
     )
   }
@@ -308,193 +270,32 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
               {erro}
             </p>
           ))}
+          {sessaoExpirada ? (
+            // Nova aba: entrar de novo sem perder o pedido montado aqui;
+            // depois é só voltar e enviar.
+            <a
+              href={comRetorno(ROTA_LOGIN, '/pedido')}
+              target="_blank"
+              rel="noopener"
+              className="hover-verde w-fit font-sans text-[color:var(--color-marrom)] underline transition-colors"
+            >
+              Entrar novamente (abre em nova aba)
+            </a>
+          ) : null}
         </div>
       ) : null}
 
-      {/* Seletor de produtos (chips) ---------------------------------------- */}
-      <section aria-labelledby="pedido-itens-titulo" className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h2
-            id="pedido-itens-titulo"
-            className="border-b-2 border-[color:var(--color-oliva)] pb-1 font-serif text-2xl text-[color:var(--color-marrom)]"
-          >
-            Escolha os itens
-          </h2>
-          <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
-            Toque nos itens para adicioná-los ao pedido.
-          </p>
-          {errosCampos.itens ? (
-            <p id="pedido-erro-itens" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
-              {errosCampos.itens}
-            </p>
-          ) : null}
-        </div>
-
-        {secoesSelecionaveis.map((grupo) => (
-          <div key={grupo.secao} className="flex flex-col gap-3">
-            <h3 className="font-serif text-xl text-[color:var(--color-marrom)]">
-              {grupo.secao}
-            </h3>
-            <ul className="flex flex-wrap gap-2">
-              {grupo.itens.map((item) => {
-                const ativo = estaSelecionado(item.id)
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      aria-pressed={ativo}
-                      onClick={() => alternarItem(item)}
-                      className={`borda-sistema flex flex-col gap-0.5 rounded-[var(--radius)] px-4 py-2 text-left font-sans transition-colors ${
-                        ativo
-                          ? 'border-[color:var(--color-marrom)] bg-[color:var(--color-marrom)] text-[color:var(--color-papel)] hover:bg-[color:var(--color-marrom-escuro)]'
-                          : 'text-[color:var(--color-paragrafo)] hover-verde'
-                      }`}
-                    >
-                      <span
-                        className={
-                          ativo
-                            ? 'text-[color:var(--color-papel)]'
-                            : 'text-[color:var(--color-marrom)]'
-                        }
-                      >
-                        {item.nome}
-                      </span>
-                      <span className="text-sm">
-                        {item.detalhe ? `${item.detalhe} · ` : ''}
-                        {item.preco != null ? renderPreco(item.preco) : 'escolha o tamanho'}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
-      </section>
-
-      {/* Resumo do pedido em montagem (tags) --------------------------------- */}
-      <section aria-labelledby="pedido-resumo-titulo" className="flex flex-col gap-3">
-        <h2
-          id="pedido-resumo-titulo"
-          className="border-b-2 border-[color:var(--color-oliva)] pb-1 font-serif text-2xl text-[color:var(--color-marrom)]"
-        >
-          Seu pedido
-        </h2>
-
-        <div aria-live="polite">
-          {selecionados.length === 0 ? (
-            <p className="font-sans text-[color:var(--color-paragrafo)]">
-              Nenhum item selecionado ainda.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {selecionados.map((sel) => {
-                const item = itensPorId.get(sel.id)
-                if (!item) return null
-                const ehPizza = item.preco == null
-                const pendente = ehPizza && sel.tamanhoId == null
-                const preco = precoExibido(sel)
-
-                return (
-                  <li
-                    key={sel.id}
-                    className={`borda-sistema flex flex-col gap-3 rounded-[var(--radius)] bg-[color:var(--color-papel)] p-4 ${
-                      pendente ? 'border-[color:var(--color-verde)]' : ''
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-sans text-[color:var(--color-marrom)]">
-                          {item.nome}
-                        </span>
-                        {preco != null ? (
-                          <span className="font-sans text-sm text-[color:var(--color-paragrafo)]">
-                            {renderPreco(preco)} cada
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {/* Stepper de quantidade */}
-                        <button
-                          type="button"
-                          onClick={() => alterarQuantidade(sel.id, -1)}
-                          disabled={sel.quantidade <= 1}
-                          aria-label={`Diminuir quantidade de ${item.nome}`}
-                          className="borda-sistema hover-verde inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius)] font-sans text-[color:var(--color-marrom)] transition-colors disabled:opacity-40"
-                        >
-                          −
-                        </button>
-                        <span
-                          aria-label={`Quantidade de ${item.nome}: ${sel.quantidade}`}
-                          className="min-w-6 text-center font-sans text-[color:var(--color-marrom)]"
-                        >
-                          {sel.quantidade}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => alterarQuantidade(sel.id, 1)}
-                          aria-label={`Aumentar quantidade de ${item.nome}`}
-                          className="borda-sistema hover-verde inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius)] font-sans text-[color:var(--color-marrom)] transition-colors"
-                        >
-                          +
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removerItem(sel.id)}
-                          aria-label={`Remover ${item.nome} do pedido`}
-                          className="hover-verde ml-1 font-sans text-sm text-[color:var(--color-paragrafo)] underline transition-colors"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Seletor de tamanho DENTRO da linha da pizza (obrigatório
-                        para pizzas; o preço exibido é o do tamanho). */}
-                    {ehPizza ? (
-                      <fieldset
-                        className={`flex flex-col gap-2 rounded-[var(--radius)] ${
-                          pendente ? 'border border-[color:var(--color-verde)] p-3' : ''
-                        }`}
-                      >
-                        <legend className="px-1 font-sans text-sm text-[color:var(--color-marrom)]">
-                          {pendente
-                            ? 'Escolha o tamanho (obrigatório):'
-                            : 'Tamanho escolhido:'}
-                        </legend>
-                        <div className="flex flex-wrap gap-2">
-                          {tamanhos.map((tamanho) => (
-                            <label
-                              key={tamanho.id}
-                              className={`borda-sistema cursor-pointer rounded-[var(--radius)] px-3 py-1.5 font-sans text-sm transition-colors ${
-                                sel.tamanhoId === tamanho.id
-                                  ? 'border-[color:var(--color-marrom)] bg-[color:var(--color-marrom)] text-[color:var(--color-papel)] hover:bg-[color:var(--color-marrom-escuro)]'
-                                  : 'text-[color:var(--color-paragrafo)] hover-verde'
-                              }`}
-                            >
-                              <input
-                                type="radio"
-                                name={`tamanho-${sel.id}`}
-                                value={tamanho.id}
-                                checked={sel.tamanhoId === tamanho.id}
-                                onChange={() => alterarTamanho(sel.id, tamanho.id)}
-                                className="sr-only"
-                              />
-                              {tamanho.nome}
-                              {tamanho.preco != null ? ` — ${renderPreco(tamanho.preco)}` : ''}
-                            </label>
-                          ))}
-                        </div>
-                      </fieldset>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
-      </section>
+      {/* Seletor de produtos (chips) + resumo do pedido em montagem -------- */}
+      <SeletorItensCardapio
+        secoes={secoes}
+        selecionados={selecionados}
+        onChange={setSelecionados}
+        idPrefixo="pedido"
+        tituloSelecao="Escolha os itens"
+        instrucao="Toque nos itens para adicioná-los ao pedido."
+        tituloResumo="Seu pedido"
+        erro={errosCampos.itens}
+      />
 
       {/* Dados do cliente ------------------------------------------------------ */}
       <section aria-labelledby="pedido-dados-titulo" className="flex flex-col gap-4">
@@ -614,7 +415,7 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
           Marque no mapa o local exato da entrega — no Vale do Capão não usamos endereço
           formal.
         </p>
-        <PedidoMapa onMudancaPonto={setPonto} />
+        <PedidoMapa onMudancaPonto={setPonto} pontoInicial={pontoConta} />
         {errosCampos.localizacao ? (
           <p role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
             {errosCampos.localizacao}

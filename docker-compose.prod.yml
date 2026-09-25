@@ -1,14 +1,16 @@
-# Production overrides. Merge explicitly on top of docker-compose.yml:
+# Local production-like run (builds the `runner` image from source, with its
+# own Postgres). Merge explicitly on top of docker-compose.yml:
 #
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Real staging/production deploys use the published image instead: see
+# deploy/compose.yml and the README.
 
 services:
   app:
     build:
+      # Segredos NUNCA entram no build (a imagem não os usa); só em runtime.
       target: runner
-      args:
-        DATABASE_URI: ${DATABASE_URI:-postgres://payload:payload@postgres:5432/payload}
-        PAYLOAD_SECRET: ${PAYLOAD_SECRET:-change-me}
     environment:
       NODE_ENV: production
     volumes:

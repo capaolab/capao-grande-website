@@ -35,6 +35,7 @@ vi.mock('next/link', () => ({
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }))
 
 function filterDomProps(props: Record<string, unknown>): Record<string, unknown> {
@@ -100,6 +101,8 @@ describe('<SiteHeader> — menu hamburger mobile', () => {
     // A rota atual ('/') marca "Início" como ativo no painel mobile.
     const links = Array.from(painel!.querySelectorAll('a'))
     expect(links.map((a) => a.textContent)).toContain('Processo')
+    const pimenta = links.find((a) => a.textContent === 'Pimenta em mel')
+    expect(pimenta?.getAttribute('href')).toBe('/pimenta-em-mel')
     const inicio = links.find((a) => a.textContent === 'Início')
     expect(inicio?.getAttribute('aria-current')).toBe('page')
 

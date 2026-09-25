@@ -73,6 +73,9 @@ export interface Config {
     cardapio: Cardapio;
     cronologia: Cronologia;
     pedidos: Pedido;
+    caixa: Caixa;
+    'produtos-pimenta': ProdutosPimenta;
+    'pedidos-pimenta': PedidosPimenta;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +89,9 @@ export interface Config {
     cardapio: CardapioSelect<false> | CardapioSelect<true>;
     cronologia: CronologiaSelect<false> | CronologiaSelect<true>;
     pedidos: PedidosSelect<false> | PedidosSelect<true>;
+    caixa: CaixaSelect<false> | CaixaSelect<true>;
+    'produtos-pimenta': ProdutosPimentaSelect<false> | ProdutosPimentaSelect<true>;
+    'pedidos-pimenta': PedidosPimentaSelect<false> | PedidosPimentaSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -135,6 +141,27 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: number;
+  /**
+   * Obrigatório para clientes (validado em hook).
+   */
+  nome?: string | null;
+  /**
+   * Obrigatório para clientes (validado em hook).
+   */
+  sobrenome?: string | null;
+  /**
+   * Obrigatório para clientes: é o vínculo com os pedidos de delivery (gravado só com dígitos).
+   */
+  telefone?: string | null;
+  /**
+   * Localização opcional do cliente (ponto no mapa), usada nos pedidos.
+   */
+  latitude?: number | null;
+  longitude?: number | null;
+  /**
+   * Referência textual opcional (no Vale do Capão não há endereço formal).
+   */
+  localidade?: string | null;
   role: 'admin' | 'funcionario' | 'cliente';
   updatedAt: string;
   createdAt: string;
@@ -291,7 +318,117 @@ export interface Pedido {
    */
   subtotal?: number | null;
   /**
-   * Status INTERNO do atendente (RN09). Não é exposto ao cliente: toda a comunicação (confirmação, preço final com frete, saída para entrega) é feita via WhatsApp.
+   * Visível ao cliente no dashboard /area-cliente (RN09 revogada): pendente → "Recebido", pago → "Pagamento confirmado", em_transito → "Saiu para entrega", finalizado → "Entregue". Atualize conforme a conversa no WhatsApp avança.
+   */
+  status: 'pendente' | 'pago' | 'em_transito' | 'finalizado';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "caixa".
+ */
+export interface Caixa {
+  id: number;
+  /**
+   * Gerado automaticamente na criação.
+   */
+  codigo?: string | null;
+  mesa?: string | null;
+  itens: {
+    item: number | Cardapio;
+    quantidade: number;
+    tamanho?: (number | null) | Cardapio;
+    nomeSnapshot?: string | null;
+    precoUnitario?: number | null;
+    id?: string | null;
+  }[];
+  subtotal?: number | null;
+  servico?: boolean | null;
+  taxaServico?: number | null;
+  desconto?: number | null;
+  total?: number | null;
+  pagamentos?:
+    | {
+        valor: number;
+        forma?: ('pix' | 'dinheiro' | 'cartao') | null;
+        pago?: boolean | null;
+        pagoEm?: string | null;
+        editado?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Derivado: "Paga" quando todas as partes estão pagas.
+   */
+  status: 'aberta' | 'paga';
+  funcionario?: (number | null) | User;
+  observacoes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "produtos-pimenta".
+ */
+export interface ProdutosPimenta {
+  id: number;
+  nome: string;
+  /**
+   * Ex.: "150 ml", "1 L".
+   */
+  volume?: string | null;
+  descricao?: string | null;
+  preco: number;
+  /**
+   * Opcional. Aplicado a cada unidade quando a quantidade pedida atinge o lote mínimo.
+   */
+  precoLote?: number | null;
+  /**
+   * Quantidade a partir da qual vale o preço de lote. Obrigatório se houver preço de lote.
+   */
+  loteMinimo?: number | null;
+  imagem?: (number | null) | Media;
+  ordem?: number | null;
+  ativo?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pedidos-pimenta".
+ */
+export interface PedidosPimenta {
+  id: number;
+  /**
+   * Código público gerado na criação — referência na conversa do WhatsApp.
+   */
+  codigo?: string | null;
+  nome: string;
+  telefone: string;
+  /**
+   * Opcional: restaurante ou comércio que fez o pedido.
+   */
+  estabelecimento?: string | null;
+  itens: {
+    produto: number | ProdutosPimenta;
+    quantidade: number;
+    nomeSnapshot?: string | null;
+    precoUnitario?: number | null;
+    lote?: boolean | null;
+    id?: string | null;
+  }[];
+  modalidade: 'entrega' | 'retirada';
+  latitude?: number | null;
+  longitude?: number | null;
+  localidade?: string | null;
+  observacoes?: string | null;
+  /**
+   * Calculado no servidor (preço unitário ou de lote). Não inclui frete — combinado pelo WhatsApp.
+   */
+  subtotal?: number | null;
+  /**
+   * Mesmo funil do delivery. Na retirada, "Em trânsito" aparece ao cliente como "Pronto para retirada".
    */
   status: 'pendente' | 'pago' | 'em_transito' | 'finalizado';
   updatedAt: string;
@@ -344,6 +481,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'pedidos';
         value: number | Pedido;
+      } | null)
+    | ({
+        relationTo: 'caixa';
+        value: number | Caixa;
+      } | null)
+    | ({
+        relationTo: 'produtos-pimenta';
+        value: number | ProdutosPimenta;
+      } | null)
+    | ({
+        relationTo: 'pedidos-pimenta';
+        value: number | PedidosPimenta;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -392,6 +541,12 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  nome?: T;
+  sobrenome?: T;
+  telefone?: T;
+  latitude?: T;
+  longitude?: T;
+  localidade?: T;
   role?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -490,6 +645,90 @@ export interface PedidosSelect<T extends boolean = true> {
         precoUnitario?: T;
         id?: T;
       };
+  latitude?: T;
+  longitude?: T;
+  localidade?: T;
+  observacoes?: T;
+  subtotal?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "caixa_select".
+ */
+export interface CaixaSelect<T extends boolean = true> {
+  codigo?: T;
+  mesa?: T;
+  itens?:
+    | T
+    | {
+        item?: T;
+        quantidade?: T;
+        tamanho?: T;
+        nomeSnapshot?: T;
+        precoUnitario?: T;
+        id?: T;
+      };
+  subtotal?: T;
+  servico?: T;
+  taxaServico?: T;
+  desconto?: T;
+  total?: T;
+  pagamentos?:
+    | T
+    | {
+        valor?: T;
+        forma?: T;
+        pago?: T;
+        pagoEm?: T;
+        editado?: T;
+        id?: T;
+      };
+  status?: T;
+  funcionario?: T;
+  observacoes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "produtos-pimenta_select".
+ */
+export interface ProdutosPimentaSelect<T extends boolean = true> {
+  nome?: T;
+  volume?: T;
+  descricao?: T;
+  preco?: T;
+  precoLote?: T;
+  loteMinimo?: T;
+  imagem?: T;
+  ordem?: T;
+  ativo?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pedidos-pimenta_select".
+ */
+export interface PedidosPimentaSelect<T extends boolean = true> {
+  codigo?: T;
+  nome?: T;
+  telefone?: T;
+  estabelecimento?: T;
+  itens?:
+    | T
+    | {
+        produto?: T;
+        quantidade?: T;
+        nomeSnapshot?: T;
+        precoUnitario?: T;
+        lote?: T;
+        id?: T;
+      };
+  modalidade?: T;
   latitude?: T;
   longitude?: T;
   localidade?: T;

@@ -19,8 +19,11 @@
 // um painel vertical dentro do header. O painel fecha ao trocar de rota, ao
 // clicar num link e via tecla Escape.
 //
-// Mobile: hamburger à esquerda e logo alinhado à DIREITA. O "Entrar" NÃO
-// aparece na barra — fica dentro do painel hamburger, ao final da lista.
+// Mobile: hamburger à esquerda e logo CENTRALIZADO — a barra vira um grid de
+// 3 colunas (`1fr auto 1fr`) abaixo de `md`; o nav e o botão, escondidos, não
+// participam do grid, então o logo cai na coluna central. O "Entrar"/"Sair"
+// (<AuthButton>, auth-aware) NÃO aparece na barra — fica dentro do painel
+// hamburger, ao final da lista.
 //
 // Acessibilidade: landmark <nav> com `aria-label`, links com nomes acessíveis
 // e `aria-current="page"` no item ativo (Req 20.2, 20.3). O botão hamburger tem
@@ -31,6 +34,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState, type ReactElement } from 'react'
 
+import { AuthButton } from '@/components/AuthButton'
 import { Watercolor } from '@/components/Watercolor'
 
 /** Itens de navegação do site (desktop: em linha; mobile: painel hamburger). */
@@ -40,6 +44,7 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string }> = [
   { href: '/pizzaria', label: 'Pizzaria' },
   { href: '/cardapio', label: 'Cardápio' },
   { href: '/delivery', label: 'Delivery' },
+  { href: '/pimenta-em-mel', label: 'Pimenta em mel' },
   { href: '/processo', label: 'Processo' },
   { href: '/sobre', label: 'Sobre' },
 ]
@@ -88,17 +93,17 @@ export function SiteHeader(): ReactElement {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-borda bg-papel/80 backdrop-blur">
-      <div className="mx-auto flex w-full max-w-conteudo items-center justify-between gap-x-6 px-6 py-3">
+      <div className="mx-auto grid w-full max-w-conteudo grid-cols-[1fr_auto_1fr] items-center gap-x-6 px-6 py-3 md:flex md:justify-between">
         {/* Botão hamburger — somente mobile (< md). Ícone SVG decorativo:
-            3 barras quando fechado, X quando aberto. No mobile é o primeiro
-            item do fluxo, então fica à ESQUERDA (logo à direita). */}
+            3 barras quando fechado, X quando aberto. No mobile ocupa a 1ª
+            coluna do grid, alinhado à esquerda. */}
         <button
           type="button"
           aria-label={menuAberto ? 'Fechar menu' : 'Abrir menu'}
           aria-expanded={menuAberto}
           aria-controls="menu-mobile"
           onClick={() => setMenuAberto((aberto) => !aberto)}
-          className="text-marrom hover-verde -ml-2 p-2 transition-colors md:hidden"
+          className="text-marrom hover-verde -ml-2 justify-self-start p-2 transition-colors md:hidden"
         >
           <svg
             aria-hidden="true"
@@ -120,8 +125,8 @@ export function SiteHeader(): ReactElement {
         {/* Logo como link para a home. Altura limitada: 56px no mobile, 88px
             (Req 18.4) no desktop; dimensões intrínsecas reais (711×485) +
             `w-auto` preservam a proporção. É o nome do site, então recebe um
-            alt significativo. No mobile fica à DIREITA (o hamburger é o
-            primeiro item do fluxo e o `justify-between` separa os dois). */}
+            alt significativo. No mobile fica CENTRALIZADO (2ª coluna do grid;
+            nav e botão, escondidos, não participam da contagem). */}
         <Link
           href="/"
           aria-label="Capão Grande — página inicial"
@@ -158,17 +163,16 @@ export function SiteHeader(): ReactElement {
           </ul>
         </nav>
 
-        {/* Botão "Entrar" — ação (não é item de conteúdo, então fica fora de
-            NAV_ITEMS e sem aria-current). Somente desktop: botão compacto à
-            direita, colado na nav; no mobile ele aparece dentro do painel
-            hamburger (ver abaixo). A visibilidade fica num wrapper SEM
-            `btn-primario`: essa classe é CSS não-layered com `display:
-            inline-flex`, que venceria o `hidden` do Tailwind no mesmo
-            elemento e manteria o botão visível no mobile. */}
+        {/* Ação de autenticação — <AuthButton> decide entre "Entrar"
+            (deslogado) e "Painel" + "Sair" (logado) conforme `/api/users/me`.
+            Fica fora de NAV_ITEMS e sem aria-current por ser ação, não item
+            de conteúdo. Somente desktop: à direita, colado na nav; no mobile
+            aparece dentro do painel hamburger (ver abaixo). A visibilidade
+            fica num wrapper SEM `btn-primario`: essa classe é CSS não-layered
+            com `display: inline-flex`, que venceria o `hidden` do Tailwind no
+            mesmo elemento e manteria o botão visível no mobile. */}
         <div className="hidden md:block">
-          <Link href="/login" className="btn-primario px-3 py-1.5 text-[0.95rem]">
-            Entrar
-          </Link>
+          <AuthButton />
         </div>
       </div>
 
@@ -196,16 +200,10 @@ export function SiteHeader(): ReactElement {
                 </li>
               )
             })}
-            {/* "Entrar" — no mobile fica dentro do painel hamburger, ao final
-                da lista; fecha o painel no clique como os demais links. */}
-            <li>
-              <Link
-                href="/login"
-                onClick={() => setMenuAberto(false)}
-                className="btn-primario mt-2 self-start px-3 py-1.5"
-              >
-                Entrar
-              </Link>
+            {/* Autenticação — no mobile fica dentro do painel hamburger, ao
+                final da lista; `onNavigate` fecha o painel no clique. */}
+            <li className="mt-2 self-start">
+              <AuthButton onNavigate={() => setMenuAberto(false)} />
             </li>
           </ul>
         </nav>

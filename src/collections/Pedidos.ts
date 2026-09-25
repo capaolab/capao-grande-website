@@ -1,11 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
-import {
-  calcularSubtotal,
-  descreverErroSubtotal,
-  gerarCodigoPedido,
-  type ItemPedidoEntrada,
-} from '@/lib/pedidos'
+import { OPCOES_STATUS_PEDIDO } from '@/lib/status-pedido'
+import { normalizarTelefone } from '@/lib/telefone'
+
+import { gerarCodigoUnico } from './codigo-unico'
+import { resolverItensCardapio } from './itens-cardapio'
 
 // Colecao_Pedidos (docs/features/delivery-pedidos.md, Tarefa 1): pedidos de
 // delivery submetidos pelo formulário público.
@@ -24,31 +23,22 @@ import {
 // - `subtotal`: soma dos produtos, calculada NO SERVIDOR a partir dos preços
 //   atuais do cardápio — nunca confiando no cliente (Tarefa 4). Não inclui
 //   frete: o preço final é informado pelo atendente via mensagem (RN08).
-// - `status`: interno do atendente (RN09), pendente → pago → em_transito →
-//   finalizado. A comunicação com o cliente é sempre via WhatsApp.
+// - `status`: pendente → pago → em_transito → finalizado. Era interno do
+//   atendente (antiga RN09 — REVOGADA pela feature dashboard-pedidos.md):
+//   agora o CLIENTE acompanha o status dos próprios pedidos no dashboard
+//   `/area-cliente` e o funcionário o gerencia em `/area-funcionario`.
 //
 // Filtros: o admin do Payload gera automaticamente filtros por campos select
 // (`status`) e date (`createdAt`, que marca a data/hora do pedido), cobrindo
 // o RN05 sem configuração extra.
 //
-// Access control: criação liberada (a submissão pública passa pelo endpoint
-// customizado /api/submeter-pedido, que valida honeypot, rate limit e campos
-// ANTES de criar — ver src/endpoints/submeter-pedido.ts); leitura, edição e
-// remoção restritas a usuários autenticados.
-
-// Opções fixas de `status` (RN05). Labels pt-BR; `em_transito` sem espaço no
-// value para não vazar caracteres especiais em queries/URLs.
-const STATUS = [
-  { label: 'Pendente', value: 'pendente' },
-  { label: 'Pago', value: 'pago' },
-  { label: 'Em trânsito', value: 'em_transito' },
-  { label: 'Finalizado', value: 'finalizado' },
-] as const
-
-// Tentativas de geração de código antes de desistir por colisão. Com 4
-// caracteres sobre um alfabeto de 32 símbolos há ~1M de códigos, então uma
-// colisão é rara — mas o retry garante unicidade mesmo assim (RN04).
-const TENTATIVAS_CODIGO = 10
+// Access control (dashboard-pedidos.md, RN-D05): criação liberada (a
+// submissão pública passa pelo endpoint customizado /api/submeter-pedido, que
+// valida honeypot, rate limit e campos ANTES de criar — ver
+// src/endpoints/submeter-pedido.ts); leitura por papel — admin/funcionário
+// leem TODOS os pedidos, CLIENTE lê apenas os pedidos cujo `telefone` bate
+// com o da sua conta (vínculo por telefone normalizado); atualização restrita
+// a admin/funcionário (gestão manual de status); remoção só de admin.
 
 export const Pedidos: CollectionConfig = {
   slug: 'pedidos',
@@ -62,15 +52,27 @@ export const Pedidos: CollectionConfig = {
     defaultColumns: ['codigo', 'nome', 'telefone', 'status', 'subtotal', 'createdAt'],
   },
   access: {
-    // Criação pública: a validação real acontece no endpoint de submissão
-    // (honeypot + rate limit + validação server-side); a Local API do hook é
-    // interna e bypassa access de qualquer forma.
-    create: () => true,
-    // Leitura/edição/remoção exigem usuário autenticado do admin (RN09: o
-    // status e os dados do pedido não são expostos publicamente).
-    read: ({ req: { user } }) => Boolean(user),
-    update: ({ req: { user } }) => Boolean(user),
-    delete: ({ req: { user } }) => Boolean(user),
+    // Criação exige sessão (RN12 — login obrigatório para pedir). O fluxo
+    // normal passa pelo endpoint /api/submeter-pedido (honeypot + rate limit +
+    // validação server-side), que usa a Local API (overrideAccess); esta
+    // regra fecha o POST anônimo direto em /api/pedidos.
+    create: ({ req: { user } }) => Boolean(user),
+    // Leitura por papel (RN-D05): admin/funcionário leem todos (operação);
+    // cliente lê apenas os pedidos do PRÓPRIO telefone (vínculo por telefone
+    // normalizado, gravado só com dígitos — ver hook beforeValidate); anônimo
+    // não lê nada.
+    read: ({ req: { user } }) => {
+      if (!user) return false
+      if (user.role === 'admin' || user.role === 'funcionario') return true
+      if (user.role === 'cliente' && typeof user.telefone === 'string' && user.telefone) {
+        return { telefone: { equals: user.telefone } }
+      }
+      return false
+    },
+    // Gestão manual de status (e demais campos) é exclusiva da operação:
+    // admin e funcionário. Cliente nunca altera pedido.
+    update: ({ req: { user } }) => user?.role === 'admin' || user?.role === 'funcionario',
+    delete: ({ req: { user } }) => user?.role === 'admin',
   },
   fields: [
     {
@@ -191,89 +193,42 @@ export const Pedidos: CollectionConfig = {
       type: 'select',
       required: true,
       defaultValue: 'pendente',
-      options: [...STATUS],
+      // Opções fixas (RN05), compartilhadas com `pedidos-pimenta`.
+      options: OPCOES_STATUS_PEDIDO,
       label: 'Status',
       admin: {
         description:
-          'Status INTERNO do atendente (RN09). Não é exposto ao cliente: toda a comunicação (confirmação, preço final com frete, saída para entrega) é feita via WhatsApp.',
+          'Visível ao cliente no dashboard /area-cliente (RN09 revogada): pendente → "Recebido", pago → "Pagamento confirmado", em_transito → "Saiu para entrega", finalizado → "Entregue". Atualize conforme a conversa no WhatsApp avança.',
       },
     },
   ],
   hooks: {
+    // Telefone gravado NORMALIZADO (só dígitos): o vínculo pedido ↔ conta do
+    // cliente compara `pedidos.telefone` com `users.telefone` (normalizado do
+    // mesmo jeito no hook da collection users).
+    beforeValidate: [
+      ({ data }) => {
+        if (data && typeof data.telefone === 'string' && data.telefone.trim() !== '') {
+          data.telefone = normalizarTelefone(data.telefone)
+        }
+        return data
+      },
+    ],
     beforeChange: [
       async ({ data, req, operation }) => {
-        const { payload } = req
-
-        // Código público: gerado apenas na CRIAÇÃO (RN04), com retry em caso
-        // de colisão (verificação real via payload.find, não só o índice
-        // unique do banco).
+        // Código público: gerado apenas na CRIAÇÃO (RN04), único na collection.
         if (operation === 'create' && !data.codigo) {
-          for (let tentativa = 0; tentativa < TENTATIVAS_CODIGO; tentativa++) {
-            const candidato = gerarCodigoPedido()
-            const { totalDocs } = await payload.find({
-              collection: 'pedidos',
-              where: { codigo: { equals: candidato } },
-              limit: 1,
-              depth: 0,
-              req,
-            })
-            if (totalDocs === 0) {
-              data.codigo = candidato
-              break
-            }
-          }
-          if (!data.codigo) {
-            throw new Error(
-              `Não foi possível gerar um código único de pedido após ${TENTATIVAS_CODIGO} tentativas.`,
-            )
-          }
+          data.codigo = await gerarCodigoUnico(req, 'pedidos')
         }
 
         // Subtotal: recalculado SEMPRE no servidor a partir dos preços atuais
         // do cardápio (Tarefa 4 — nunca confiar no cliente). Erros de domínio
         // (item inexistente, pizza sem tamanho, quantidade inválida) REJEITAM
-        // a gravação com mensagem clara.
-        const entradas: ItemPedidoEntrada[] = (data.itens ?? []).map(
-          (item: { item: unknown; quantidade: unknown; tamanho?: unknown }) => ({
-            item: item.item as number | string,
-            quantidade: item.quantidade as number,
-            tamanho: (item.tamanho ?? null) as number | string | null,
-          }),
-        )
-
-        const ids = [
-          ...new Set(
-            entradas.flatMap((e) => [e.item, e.tamanho]).filter((id) => id != null),
-          ),
-        ] as (number | string)[]
-
-        const { docs: cardapio } = await payload.find({
-          collection: 'cardapio',
-          where: { id: { in: ids } },
-          limit: 0,
-          depth: 0,
-          req,
-        })
-
-        const resultado = calcularSubtotal(entradas, cardapio)
-
-        if (!resultado.ok) {
-          throw new Error(
-            `Pedido inválido: ${resultado.erros.map(descreverErroSubtotal).join(' ')}`,
-          )
-        }
-
-        // Snapshots (nome/preço unitário) gravados por item: preservam o valor
-        // cobrado mesmo que o cardápio mude depois.
-        data.itens = (data.itens ?? []).map(
-          (item: Record<string, unknown>, indice: number) => ({
-            ...item,
-            tamanho: resultado.itens[indice].tamanho,
-            nomeSnapshot: resultado.itens[indice].nomeSnapshot,
-            precoUnitario: resultado.itens[indice].precoUnitario,
-          }),
-        )
-        data.subtotal = resultado.subtotal
+        // a gravação com mensagem clara. Snapshots (nome/preço unitário) por
+        // item preservam o valor cobrado mesmo que o cardápio mude depois.
+        const resolvido = await resolverItensCardapio(data.itens ?? [], req, 'Pedido')
+        data.itens = resolvido.itens
+        data.subtotal = resolvido.subtotal
 
         return data
       },

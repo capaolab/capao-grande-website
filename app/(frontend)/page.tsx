@@ -8,7 +8,9 @@
 //  - 3 informes publicados mais recentes que NÃO são o destaque (Req 10.2):
 //    getInformesRecentes(3, destaque?.id) exclui o destaque pelo id. Se houver
 //    menos que 3, renderiza apenas os que existem (sem fabricar).
-//  - 3 <NavCard> apontando para /processo, /delivery, /pizzaria (Req 10.3).
+//  - <PedidoCta> logo após o hero: atalho direto para o formulário /pedido
+//    (sem passar por /delivery).
+//  - <NavCard>s para /processo, /delivery, /pimenta-em-mel e /pizzaria (Req 10.3).
 //
 // Acessibilidade (Req 20.2): exatamente UM <h1> na página (o título do hero, ou
 // um título institucional quando não há destaque). Os rótulos de seção ("olho")
@@ -24,6 +26,7 @@ import type { ReactElement } from 'react'
 import { CmsImage } from '@/components/CmsImage'
 import { InformeCard } from '@/components/InformeCard'
 import { NavCard } from '@/components/NavCard'
+import { PedidoCta } from '@/components/PedidoCta'
 import { Placeholder } from '@/components/Placeholder'
 import { getInformeDestaque, getInformesRecentes } from '@/lib/queries'
 
@@ -121,6 +124,9 @@ export default async function Home(): Promise<ReactElement> {
         )}
       </section>
 
+      {/* ---- CTA de pedidos: atalho direto para /pedido ------------------- */}
+      <PedidoCta />
+
       {/* ---- Informes recentes (Req 10.2) --------------------------------- */}
       {recentes.length > 0 ? (
         <section aria-labelledby="recentes-heading">
@@ -149,7 +155,7 @@ export default async function Home(): Promise<ReactElement> {
         </section>
       ) : null}
 
-      {/* ---- Navegação: 3 NavCards (Req 10.3) ----------------------------- */}
+      {/* ---- Navegação: NavCards (Req 10.3 + pimenta-em-mel.md) ----------- */}
       <section aria-labelledby="nav-heading">
         <OlhoSecao>Conheça o Capão</OlhoSecao>
         <h2
@@ -171,6 +177,12 @@ export default async function Home(): Promise<ReactElement> {
             title="Delivery"
             description="Peça pelo WhatsApp e pague no Pix. Entrega com taxa por distância."
             watercolor="molho"
+          />
+          <NavCard
+            href="/pimenta-em-mel"
+            title="Pimenta em mel"
+            description="Produção da casa, por unidade ou em lote para restaurantes."
+            watercolor="mel"
           />
           <NavCard
             href="/pizzaria"

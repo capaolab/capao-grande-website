@@ -40,9 +40,9 @@ interface InformeDetalhePageProps {
 }
 
 /**
- * Gera os parâmetros estáticos para o export de staging (Vercel,
+ * Gera os parâmetros estáticos para o export de preview (Vercel,
  * `CONTENT_SOURCE=static` — ver next.config.ts e
- * .github/workflows/deploy-staging.yml). `output: 'export'` exige que TODO
+ * .github/workflows/deploy-preview.yml). `output: 'export'` exige que TODO
  * segmento dinâmico seja conhecido em build time; fora do modo estático
  * devolve `[]`, preservando o comportamento atual (SSR sob demanda via
  * `dynamicParams: true` implícito, quando há Payload/Postgres disponível).

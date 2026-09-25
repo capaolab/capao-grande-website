@@ -1,5 +1,5 @@
-// content/static-content.ts — camada de conteúdo do build ESTÁTICO de staging
-// (Vercel, `CONTENT_SOURCE=static`; ver .github/workflows/deploy-staging.yml).
+// content/static-content.ts — camada de conteúdo do build ESTÁTICO de preview
+// (Vercel, `CONTENT_SOURCE=static`; ver .github/workflows/deploy-preview.yml).
 //
 // Resolve os mesmos dados de content/seed-data.ts em memória, no formato que
 // `lib/queries.ts` devolveria a partir do Payload Local API — sem Payload, sem
@@ -10,7 +10,7 @@
 //
 // Este módulo NUNCA deve importar 'payload', '@payloadcms/*' nem
 // '@payload-config': é o que permite ao build estático rodar sem
-// DATABASE_URI/PAYLOAD_SECRET (Requisito do ambiente de staging na Vercel).
+// DATABASE_URI/PAYLOAD_SECRET (Requisito do ambiente de preview na Vercel).
 
 import type { Cardapio, Configuracoe, Cronologia, Informe } from '@/src/payload-types'
 
@@ -97,7 +97,7 @@ export function getInformesRecentes(limit = 3, excludeId?: number): Informe[] {
  * antigas" parecer quebrado (recarrega a mesma página 1). Como este é um
  * ambiente de QA visual, mostrar tudo de uma vez é o comportamento correto;
  * o volume de seed (poucas dezenas de itens, no máximo) não justifica scroll
- * infinito nem paginação client-side só para o staging.
+ * infinito nem paginação client-side só para o preview.
  */
 export function getInformesPagina(_page: number): InformesPagina {
   const informes = publicados().sort(porDataDesc)

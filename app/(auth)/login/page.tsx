@@ -2,16 +2,18 @@
 //
 // Vive no route group `(auth)`: renderiza SEM a navbar e o footer da landing
 // page (ver app/(auth)/layout.tsx). Server Component (exportável
-// estaticamente no build de staging): apenas a moldura visual com o logo em
+// estaticamente no build de preview): apenas a moldura visual com o logo em
 // aquarela, o link de retorno ao site e o título; toda a interação fica no
 // client component <LoginForm>, que autentica contra a API do Payload
 // (`POST /api/users/login`) e redireciona conforme o papel do usuário
-// (admin -> /admin, funcionário -> /area-funcionario, cliente -> /area-cliente).
+// (admin -> /admin, funcionário -> /area-funcionario, cliente -> /area-cliente)
+// — ou para a rota de retorno `?next=` (ex.: /pedido) quando presente.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import type { ReactElement } from 'react'
+import { Suspense, type ReactElement } from 'react'
 
+import { LinkComRetorno } from '@/components/LinkComRetorno'
 import { Watercolor } from '@/components/Watercolor'
 
 import { LoginForm } from './LoginForm'
@@ -38,7 +40,29 @@ export default function LoginPage(): ReactElement {
         className="my-12 h-52 w-auto"
       />
 
-      <LoginForm />
+      {/* useSearchParams (rota de retorno `?next=`) exige Suspense. */}
+      <Suspense>
+        <LoginForm />
+      </Suspense>
+
+      <p className="font-sans text-sm text-paragrafo">
+        Ainda não tem conta?{' '}
+        <Suspense
+          fallback={
+            <Link href="/cadastro" className="hover-verde text-marrom underline transition-colors">
+              Cadastre-se
+            </Link>
+          }
+        >
+          <LinkComRetorno
+            href="/cadastro"
+            className="hover-verde text-marrom underline transition-colors"
+          >
+            Cadastre-se
+          </LinkComRetorno>
+        </Suspense>{' '}
+        para acompanhar seus pedidos.
+      </p>
     </article>
   )
 }

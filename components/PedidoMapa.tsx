@@ -12,6 +12,13 @@
 //    com um clique/toque no mapa — é o caminho de quem não tem GPS.
 //  - O ponto confirmado é comunicado ao formulário pai via `onMudancaPonto`
 //    (lat/lng); sem pin, o formulário não submete (RN07).
+//  - `pontoInicial` (pimenta-em-mel.md, RN-P07): localização salva no perfil
+//    do cliente. Posiciona o pin quando o mapa fica pronto (ou quando o valor
+//    chega depois, via fetch), mas NUNCA sobrescreve um pin já posicionado.
+//  - `permitirRemover`: botão "Remover ponto" (usado no perfil, onde a
+//    localização é opcional).
+//  - `rotuloPonto`: nome masculino do ponto nas mensagens ("ponto de
+//    entrega", "seu ponto de referência"...).
 //
 // Integração técnica:
 //  - Leaflet PURO (sem react-leaflet), carregado com `import()` dinâmico
@@ -47,6 +54,12 @@ export interface PontoEntrega {
 export interface PedidoMapaProps {
   /** Chamado quando o pin é posicionado/movido (ou removido, com null). */
   onMudancaPonto: (ponto: PontoEntrega | null) => void
+  /** Ponto já conhecido (ex.: localização do perfil) para posicionar o pin. */
+  pontoInicial?: PontoEntrega | null
+  /** Exibe o botão "Remover ponto". */
+  permitirRemover?: boolean
+  /** Nome do ponto nas mensagens, após "o"/"no" (padrão: "ponto de entrega"). */
+  rotuloPonto?: string
 }
 
 /** Formata lat/lng para exibição de confirmação (5 casas ≈ precisão de ~1 m). */
@@ -54,7 +67,12 @@ function formatarCoordenada(valor: number): string {
   return valor.toFixed(5).replace('.', ',')
 }
 
-export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
+export function PedidoMapa({
+  onMudancaPonto,
+  pontoInicial = null,
+  permitirRemover = false,
+  rotuloPonto = 'ponto de entrega',
+}: PedidoMapaProps): ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [ponto, setPonto] = useState<PontoEntrega | null>(null)
   const [mensagem, setMensagem] = useState<string | null>(null)
@@ -65,6 +83,7 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
   // ciclo de render do React) e para o callback mais recente do pai.
   const mapaRef = useRef<import('leaflet').Map | null>(null)
   const pinRef = useRef<import('leaflet').Marker | null>(null)
+  const posicionarPinRef = useRef<((latlng: { lat: number; lng: number }) => void) | null>(null)
   const onMudancaPontoRef = useRef(onMudancaPonto)
 
   // Mantém o callback do pai atualizado sem acessar a ref durante a
@@ -107,7 +126,7 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
           iconAnchor: [11, 11],
         })
 
-        const posicionarPin = (latlng: import('leaflet').LatLng) => {
+        const posicionarPin = (latlng: { lat: number; lng: number }) => {
           const novoPonto = { latitude: latlng.lat, longitude: latlng.lng }
 
           if (pinRef.current) {
@@ -136,6 +155,7 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
         })
 
         mapaRef.current = mapa
+        posicionarPinRef.current = posicionarPin
         setMapaPronto(true)
       } catch {
         if (!cancelado) {
@@ -153,13 +173,33 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
       mapaRef.current?.remove()
       mapaRef.current = null
       pinRef.current = null
+      posicionarPinRef.current = null
     }
   }, [])
+
+  // Ponto inicial (perfil do cliente): posiciona o pin quando o mapa está
+  // pronto e ainda não há pin — o que o usuário marcou tem prioridade.
+  const latitudeInicial = pontoInicial?.latitude
+  const longitudeInicial = pontoInicial?.longitude
+  useEffect(() => {
+    if (!mapaPronto || pinRef.current) return
+    if (latitudeInicial == null || longitudeInicial == null) return
+    const latlng = { lat: latitudeInicial, lng: longitudeInicial }
+    mapaRef.current?.setView(latlng, ZOOM_LOCALIZACAO)
+    posicionarPinRef.current?.(latlng)
+  }, [mapaPronto, latitudeInicial, longitudeInicial])
+
+  function removerPonto() {
+    pinRef.current?.remove()
+    pinRef.current = null
+    setPonto(null)
+    onMudancaPontoRef.current(null)
+  }
 
   function usarMinhaLocalizacao() {
     if (!('geolocation' in navigator)) {
       setMensagem(
-        'Seu navegador não oferece geolocalização. Toque no mapa para posicionar o pin no local de entrega.',
+        'Seu navegador não oferece geolocalização. Toque no mapa para posicionar o pin.',
       )
       return
     }
@@ -182,7 +222,7 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
         // Permissão negada ou GPS indisponível: NÃO bloqueia o pedido —
         // orienta o posicionamento manual do pin (Tarefa 3).
         setMensagem(
-          'Não foi possível obter sua localização. Toque no mapa para posicionar o pin no local de entrega.',
+          'Não foi possível obter sua localização. Toque no mapa para posicionar o pin.',
         )
       },
       { enableHighAccuracy: true, timeout: 10000 },
@@ -191,14 +231,25 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
 
   return (
     <div className="flex flex-col gap-3">
-      <button
-        type="button"
-        onClick={usarMinhaLocalizacao}
-        disabled={!mapaPronto || buscandoLocalizacao}
-        className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors disabled:opacity-60"
-      >
-        {buscandoLocalizacao ? 'Buscando sua localização…' : 'Usar minha localização'}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={usarMinhaLocalizacao}
+          disabled={!mapaPronto || buscandoLocalizacao}
+          className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors disabled:opacity-60"
+        >
+          {buscandoLocalizacao ? 'Buscando sua localização…' : 'Usar minha localização'}
+        </button>
+        {permitirRemover && ponto ? (
+          <button
+            type="button"
+            onClick={removerPonto}
+            className="borda-sistema hover-verde inline-flex w-fit items-center rounded-[var(--radius)] px-4 py-2 font-sans text-[color:var(--color-marrom)] transition-colors"
+          >
+            Remover ponto
+          </button>
+        ) : null}
+      </div>
 
       {/* Container do mapa: altura fixa (o Leaflet exige dimensão explícita).
           Os controles do Leaflet (zoom, attribution) são navegáveis; o estado
@@ -213,13 +264,13 @@ export function PedidoMapa({ onMudancaPonto }: PedidoMapaProps): ReactElement {
       <div aria-live="polite" className="flex flex-col gap-1">
         {ponto ? (
           <p className="font-sans text-sm text-[color:var(--color-marrom)]">
-            Ponto de entrega marcado ({formatarCoordenada(ponto.latitude)},{' '}
+            Pin posicionado no {rotuloPonto} ({formatarCoordenada(ponto.latitude)},{' '}
             {formatarCoordenada(ponto.longitude)}). Arraste o pin ou toque no mapa para
             ajustar.
           </p>
         ) : (
           <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
-            Toque no mapa ou use o botão acima para marcar o ponto de entrega.
+            Toque no mapa ou use o botão acima para marcar o {rotuloPonto}.
           </p>
         )}
         {mensagem ? (

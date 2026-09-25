@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import {
+  comRetorno,
   podeAcessarArea,
+  rotaDeRetorno,
   podeAcessarPainel,
   rotaPorRole,
   ROTA_ADMIN,
@@ -82,5 +84,45 @@ describe('podeAcessarArea', () => {
         },
       ),
     )
+  })
+})
+
+describe('rotaDeRetorno / comRetorno (retorno pós-login)', () => {
+  it('aceita caminhos internos', () => {
+    expect(rotaDeRetorno('/pedido')).toBe('/pedido')
+    expect(rotaDeRetorno('/informes/abc?x=1')).toBe('/informes/abc?x=1')
+  })
+
+  it('rejeita URLs externas e valores ausentes (sem open redirect)', () => {
+    for (const valor of [
+      'https://evil.com',
+      '//evil.com',
+      '/\\evil.com',
+      'pedido',
+      '',
+      null,
+      undefined,
+    ]) {
+      expect(rotaDeRetorno(valor)).toBeNull()
+    }
+  })
+
+  it('nunca devolve algo que não comece com uma única barra', () => {
+    fc.assert(
+      fc.property(fc.string(), (valor) => {
+        const rota = rotaDeRetorno(valor)
+        if (rota === null) return
+        expect(rota.startsWith('/')).toBe(true)
+        expect(rota.startsWith('//')).toBe(false)
+        expect(rota.includes('\\')).toBe(false)
+      }),
+    )
+  })
+
+  it('anexa o retorno codificado só quando é seguro', () => {
+    expect(comRetorno('/login', '/pedido')).toBe('/login?next=%2Fpedido')
+    expect(comRetorno('/login?x=1', '/pedido')).toBe('/login?x=1&next=%2Fpedido')
+    expect(comRetorno('/login', '//evil.com')).toBe('/login')
+    expect(comRetorno('/login', null)).toBe('/login')
   })
 })

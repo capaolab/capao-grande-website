@@ -1,15 +1,22 @@
 // Página pública `/pedido` — formulário de pedidos de delivery
 // (docs/features/delivery-pedidos.md, Tarefa 2) — Server Component assíncrono.
 //
-// ENTRADA POR LINK DIRETO (RN01): o funil começa no WhatsApp — o atendente
-// (ou bot) envia este link na conversa. Por isso `/pedido` NÃO consta na
-// navegação global (components/SiteHeader.tsx); a única referência interna
-// fica no passo 1 da página `/delivery`.
+// ENTRADAS (RN01, revisada): link enviado na conversa do WhatsApp, CTA da
+// home (components/PedidoCta.tsx) e bloco destacado no passo 1 de
+// `/delivery`. `/pedido` continua FORA da navegação global
+// (components/SiteHeader.tsx).
+//
+// LOGIN OBRIGATÓRIO (RN12): o conteúdo do formulário fica dentro do
+// <AreaInternaGuard area="qualquer" retorno="/pedido"> — sem sessão, vai para
+// `/login?next=/pedido` e volta aqui após login/cadastro. O endpoint
+// /api/submeter-pedido também exige sessão (401), então a regra vale mesmo
+// fora da UI. No preview estático não há API nem login: segue o aviso de
+// indisponibilidade, sem guard.
 //
 // Estrutura:
 //  - Carrega o cardápio ATIVO agrupado (getCardapioAgrupado) e as
 //    configurações (getConfiguracoes) via camada de queries.
-//  - Com CONTENT_SOURCE=static (staging estático, sem backend): NÃO renderiza
+//  - Com CONTENT_SOURCE=static (preview estático, sem backend): NÃO renderiza
 //    o formulário — o endpoint /api/submeter-pedido não existe no export
 //    estático. Renderiza um aviso de indisponibilidade orientando a pedir
 //    pelo WhatsApp (link wa.me quando configurado). Decisão deliberada.
@@ -29,6 +36,7 @@
 
 import type { ReactElement } from 'react'
 
+import { AreaInternaGuard } from '@/components/AreaInternaGuard'
 import { HoursTable } from '@/components/HoursTable'
 import { PedidoForm, type SecaoPedido } from '@/components/PedidoForm'
 import { Placeholder } from '@/components/Placeholder'
@@ -41,7 +49,7 @@ export const metadata = {
     'Formulário de pedido de delivery: escolha os itens do cardápio, marque o ponto de entrega no mapa e receba o código do pedido para a conversa no WhatsApp.',
 }
 
-// Staging estático (CONTENT_SOURCE=static): sem backend, o endpoint
+// Preview estático (CONTENT_SOURCE=static): sem backend, o endpoint
 // /api/submeter-pedido não existe no export — ver scripts/build-static.mjs.
 const CONTEUDO_ESTATICO = process.env.CONTENT_SOURCE === 'static'
 
@@ -115,40 +123,46 @@ export default async function PedidoPage(): Promise<ReactElement> {
             <Placeholder label="WhatsApp a confirmar" as="p" />
           )}
         </section>
-      ) : secoes.length === 0 ? (
-        // Cardápio vazio/indisponível: nenhum item fictício (RN11, Req 19).
-        <section aria-labelledby="pedido-cardapio-vazio" className="flex flex-col gap-3">
-          <h2
-            id="pedido-cardapio-vazio"
-            className="font-serif text-2xl text-[color:var(--color-marrom)]"
-          >
-            Cardápio indisponível
-          </h2>
-          <Placeholder label="Cardápio a confirmar" as="p" />
-          <p className="font-sans text-[color:var(--color-paragrafo)]">
-            Não foi possível carregar o cardápio agora. Tente novamente mais tarde ou peça
-            pelo WhatsApp.
-          </p>
-        </section>
       ) : (
-        <>
-          {horariosValidos.length > 0 ? (
-            <section aria-labelledby="pedido-horarios" className="flex flex-col gap-3">
+        // Login obrigatório (RN12): sem sessão, o guard manda para
+        // `/login?next=/pedido`, e o login/cadastro devolve o usuário aqui.
+        <AreaInternaGuard area="qualquer" retorno="/pedido">
+          {secoes.length === 0 ? (
+            // Cardápio vazio/indisponível: nenhum item fictício (RN11, Req 19).
+            <section aria-labelledby="pedido-cardapio-vazio" className="flex flex-col gap-3">
               <h2
-                id="pedido-horarios"
+                id="pedido-cardapio-vazio"
                 className="font-serif text-2xl text-[color:var(--color-marrom)]"
               >
-                Horário de funcionamento
+                Cardápio indisponível
               </h2>
-              <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
-                Pedidos enviados fora do horário são atendidos na próxima abertura.
+              <Placeholder label="Cardápio a confirmar" as="p" />
+              <p className="font-sans text-[color:var(--color-paragrafo)]">
+                Não foi possível carregar o cardápio agora. Tente novamente mais tarde ou peça
+                pelo WhatsApp.
               </p>
-              <HoursTable horarios={horariosValidos} />
             </section>
-          ) : null}
+          ) : (
+            <>
+              {horariosValidos.length > 0 ? (
+                <section aria-labelledby="pedido-horarios" className="flex flex-col gap-3">
+                  <h2
+                    id="pedido-horarios"
+                    className="font-serif text-2xl text-[color:var(--color-marrom)]"
+                  >
+                    Horário de funcionamento
+                  </h2>
+                  <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
+                    Pedidos enviados fora do horário são atendidos na próxima abertura.
+                  </p>
+                  <HoursTable horarios={horariosValidos} />
+                </section>
+              ) : null}
 
-          <PedidoForm secoes={secoes} whatsappDigitos={whatsappDigitos} />
-        </>
+              <PedidoForm secoes={secoes} whatsappDigitos={whatsappDigitos} />
+            </>
+          )}
+        </AreaInternaGuard>
       )}
     </article>
   )

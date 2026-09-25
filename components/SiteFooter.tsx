@@ -146,12 +146,6 @@ export async function SiteFooter(): Promise<ReactElement> {
           <p className="font-sans text-sm text-placeholder">
             © {anoAtual} Capão Grande
           </p>
-
-          <p className="font-sans text-sm">
-            <a className="text-placeholder hover-verde transition-colors" href="/admin">
-              Acesso administrativo
-            </a>
-          </p>
         </div>
       </div>
     </footer>

@@ -1,0 +1,43 @@
+# Contexto de build da imagem Docker (Dockerfile). A imagem de release é
+# publicada no GitHub Container Registry (.github/workflows/release.yml), então
+# nada de segredos, dependências locais ou artefatos de build pode entrar nela.
+
+# Segredos e configuração local — valores reais entram só em runtime.
+.env
+.env.*
+!.env.example
+
+# Dependências e artefatos: reinstalados/gerados dentro da imagem.
+node_modules
+.next
+out
+.build-static-tmp
+coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# Uploads do Payload: volume em runtime (/app/media), nunca na imagem.
+media
+
+# Controle de versão, CI e ferramentas de editor/agente.
+.git
+.github
+.kiro
+.vercel
+.claude
+
+# Deploy/infra: não fazem parte do app.
+docker-compose*.yml
+deploy
+Dockerfile
+.dockerignore
+
+# Testes e documentação não são necessários para rodar o app.
+tests
+docs
+*.md
+!README.md
+
+# Logs e lixo de SO.
+npm-debug.log*
+.DS_Store

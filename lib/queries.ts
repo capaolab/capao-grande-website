@@ -15,7 +15,13 @@
 // lib/cardapio.ts e lib/cronologia.ts e é testada por propriedade; aqui apenas
 // orquestramos a Local API e delegamos a essas funções.
 
-import type { Cardapio, Configuracoe, Cronologia, Informe } from '@/src/payload-types'
+import type {
+  Cardapio,
+  Configuracoe,
+  Cronologia,
+  Informe,
+  ProdutosPimenta,
+} from '@/src/payload-types'
 
 import { agruparCardapio, type SecaoAgrupada } from '@/lib/cardapio'
 import { ordenarCronologia } from '@/lib/cronologia'
@@ -23,8 +29,8 @@ import { getPayloadClient } from '@/lib/payload'
 import { INFORMES_PER_PAGE, paginar, type PaginationState } from '@/lib/pagination'
 import * as staticContent from '@/content/static-content'
 
-// Ambiente de staging estático (Vercel, sem Payload/Postgres — ver
-// .github/workflows/deploy-staging.yml e content/static-content.ts). Quando
+// Ambiente de preview estático (Vercel, sem Payload/Postgres — ver
+// .github/workflows/deploy-preview.yml e content/static-content.ts). Quando
 // `CONTENT_SOURCE=static`, cada função abaixo devolve os dados de seed
 // resolvidos em memória em vez de consultar a Local API.
 //
@@ -214,6 +220,27 @@ export async function getCardapioAgrupado(): Promise<SecaoAgrupada<Cardapio>[]> 
   })
 
   return agruparCardapio(docs)
+}
+
+/**
+ * Produtos de pimenta em mel ativos, por `ordem`
+ * (docs/features/pimenta-em-mel.md). No build estático não há catálogo: a
+ * página exibe placeholder e o formulário, o aviso de indisponibilidade.
+ */
+export async function getProdutosPimenta(): Promise<ProdutosPimenta[]> {
+  if (CONTEUDO_ESTATICO) return []
+
+  const payload = await getPayloadClient()
+
+  const { docs } = await payload.find({
+    collection: 'produtos-pimenta',
+    where: { ativo: { equals: true } },
+    sort: 'ordem',
+    limit: 0,
+    depth: 1,
+  })
+
+  return docs
 }
 
 /**

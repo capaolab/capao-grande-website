@@ -48,7 +48,7 @@ export default async function InformesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }): Promise<ReactElement> {
-  // Build estático de staging (CONTENT_SOURCE=static, ver next.config.ts):
+  // Build estático de preview (CONTENT_SOURCE=static, ver next.config.ts):
   // `output: 'export'` proíbe `await searchParams` (não há servidor para
   // computar por query string — uma rota vira um único HTML). Não faz mal
   // pular a leitura aqui: a camada estática (content/static-content.ts)
