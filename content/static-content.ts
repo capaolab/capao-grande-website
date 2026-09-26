@@ -24,6 +24,7 @@ import {
   CRONOLOGIA,
   INFORMES,
   richText,
+  SECOES_CARDAPIO,
   type SeedInforme,
 } from '@/content/seed-data'
 
@@ -32,13 +33,24 @@ import {
 // é suficiente — não há "quando foi criado" real a preservar.
 const BUILD_TIMESTAMP = new Date().toISOString()
 
+// Etiquetas distintas do seed, com id estável pela ordem de aparição (o seed
+// real cria um registro de `etiquetas` por nome).
+const ETIQUETAS_SEED = [...new Set(INFORMES.map((seed) => seed.etiqueta))]
+
 function paraInforme(seed: SeedInforme, id: number): Informe {
   return {
     id,
     titulo: seed.titulo,
     slug: slugify(seed.titulo),
     data: seed.data,
-    etiqueta: seed.etiqueta,
+    etiquetas: [
+      {
+        id: ETIQUETAS_SEED.indexOf(seed.etiqueta) + 1,
+        nome: seed.etiqueta,
+        updatedAt: BUILD_TIMESTAMP,
+        createdAt: BUILD_TIMESTAMP,
+      },
+    ],
     resumo: seed.resumoPt,
     corpo: richText(seed.corpoPt),
     // Nenhuma imagem de capa no seed (Req 9.4: nunca fabricar mídia) — o
@@ -131,11 +143,19 @@ export function getInformesSlugsEstaticos(): string[] {
     .filter((slug): slug is string => typeof slug === 'string' && slug.length > 0)
 }
 
+// Seções populadas como o Payload devolveria (`cardapio.secao` com depth).
+const SECOES_POR_NOME = new Map(
+  SECOES_CARDAPIO.map((secao, index) => [
+    secao.nome,
+    { ...secao, id: index + 1, updatedAt: BUILD_TIMESTAMP, createdAt: BUILD_TIMESTAMP },
+  ]),
+)
+
 /** Espelha `getCardapioAgrupado` de lib/queries.ts. */
 export function getCardapioAgrupado(): SecaoAgrupada<Cardapio>[] {
   const itens: Cardapio[] = CARDAPIO.map((item, index) => ({
     id: index + 1,
-    secao: item.secao,
+    secao: SECOES_POR_NOME.get(item.secao)!,
     nome: item.nome,
     detalhe: item.detalhe,
     preco: item.preco,

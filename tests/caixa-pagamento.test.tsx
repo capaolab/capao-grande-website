@@ -17,14 +17,14 @@ const CONTA: ContaCaixa = {
   id: 7,
   codigo: 'MESA',
   mesa: '3',
-  itens: [{ id: 'i1', nomeSnapshot: 'Pizza Grande', quantidade: 2, precoUnitario: 50 }],
+  itens: [{ id: 'i1', item: 1, nomeSnapshot: 'Pizza Grande', quantidade: 2, precoUnitario: 50 }],
   subtotal: 100,
   servico: false,
   taxaServico: 0,
   desconto: 0,
   total: 100,
   pagamentos: [],
-  status: 'aberta',
+  status: 'pagamento',
   createdAt: '2026-09-25T20:00:00.000Z',
 }
 
@@ -36,7 +36,7 @@ function mockServidor() {
     const soma = pagamentos.reduce((acc, p) => acc + Math.round(p.valor * 100), 0)
     const quitada = pagamentos.every((p) => p.pago) && soma === 10000
     return new Response(
-      JSON.stringify({ doc: { ...CONTA, pagamentos, status: quitada ? 'paga' : 'aberta' } }),
+      JSON.stringify({ doc: { ...CONTA, pagamentos, status: quitada ? 'paga' : 'pagamento' } }),
       { status: 200 },
     )
   })

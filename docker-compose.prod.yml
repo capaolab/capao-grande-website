@@ -7,12 +7,28 @@
 # deploy/compose.yml and the README.
 
 services:
+  # Aplica as migrations antes do app, como o deploy/deploy.sh faz em
+  # staging/produção (o app não migra ao subir).
+  migrate:
+    build:
+      target: migrate
+    environment:
+      DATABASE_URI: ${DATABASE_URI:-postgres://payload:payload@postgres:5432/payload}
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:-change-me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build:
       # Segredos NUNCA entram no build (a imagem não os usa); só em runtime.
       target: runner
     environment:
       NODE_ENV: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
     volumes:
       - uploads:/app/media
     restart: unless-stopped

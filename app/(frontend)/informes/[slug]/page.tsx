@@ -32,7 +32,9 @@ import { CmsImage } from '@/components/CmsImage'
 import { formatarDataPtBr } from '@/components/InformeCard'
 import { Placeholder } from '@/components/Placeholder'
 import { ShareButtons } from '@/components/ShareButtons'
+import { nomesEtiquetas } from '@/lib/etiquetas'
 import { getInformeBySlug } from '@/lib/queries'
+import { capaDoInforme } from '@/lib/unsplash'
 
 interface InformeDetalhePageProps {
   /** Segmento dinâmico `[slug]` — Promise no Next 16. */
@@ -101,7 +103,7 @@ export default async function InformeDetalhePage({
       {/* Cabeçalho: etiqueta + data (rótulos de seção, não headings — Req 20.2). */}
       <div className="mb-4 flex items-center gap-3 text-sm">
         <span className="uppercase tracking-wide text-[color:var(--color-verde)]">
-          {informe.etiqueta}
+          {nomesEtiquetas(informe.etiquetas).join(' · ')}
         </span>
         {dataFormatada ? (
           <time
@@ -123,7 +125,7 @@ export default async function InformeDetalhePage({
       {/* Capa 1:1 (Req 5.3, 12.1); placeholder listrado quando ausente. */}
       <div className="mt-8">
         <CmsImage
-          media={informe.capa}
+          media={capaDoInforme(informe)}
           square
           sizes="(max-width: 820px) 100vw, 820px"
           placeholderLabel="capa a confirmar"

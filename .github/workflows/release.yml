@@ -97,8 +97,21 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=runner
+          cache-to: type=gha,mode=max,scope=runner
+      # Imagem de migração da MESMA versão (estágio `migrate`): o deploy
+      # aplica as migrations com ela antes de subir o app (deploy/deploy.sh).
+      - name: Build and push (migrate)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: migrate
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}-migrate
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=migrate
+          cache-to: type=gha,mode=max,scope=migrate
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -106,7 +119,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "v${{ needs.verify.outputs.version }}" \
             --generate-notes \
-            --notes "Imagem: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}\`"
+            --notes "Imagens: \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}\` (app) e \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}-migrate\` (migrations)"
       - name: Summary
         run: |
           {
@@ -114,6 +127,7 @@ jobs:
             echo ""
             echo '```bash'
             echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}"
+            echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}-migrate"
             echo "./deploy/deploy.sh staging ${{ needs.verify.outputs.version }}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

@@ -9,7 +9,8 @@
 //    getInformesRecentes(3, destaque?.id) exclui o destaque pelo id. Se houver
 //    menos que 3, renderiza apenas os que existem (sem fabricar).
 //  - <PedidoCta> logo após o hero: atalho direto para o formulário /pedido
-//    (sem passar por /delivery).
+//    (sem passar por /delivery); em seguida <PedidoPimentaCta>, no mesmo
+//    modelo, para o formulário /pimenta-em-mel/pedido.
 //  - <NavCard>s para /processo, /delivery, /pimenta-em-mel e /pizzaria (Req 10.3).
 //
 // Acessibilidade (Req 20.2): exatamente UM <h1> na página (o título do hero, ou
@@ -27,8 +28,11 @@ import { CmsImage } from '@/components/CmsImage'
 import { InformeCard } from '@/components/InformeCard'
 import { NavCard } from '@/components/NavCard'
 import { PedidoCta } from '@/components/PedidoCta'
+import { PedidoPimentaCta } from '@/components/PedidoPimentaCta'
 import { Placeholder } from '@/components/Placeholder'
+import { nomesEtiquetas } from '@/lib/etiquetas'
 import { getInformeDestaque, getInformesRecentes } from '@/lib/queries'
+import { capaDoInforme } from '@/lib/unsplash'
 
 /** Rótulo de seção ("olho"): 15px caixa alta em verde. Não é um heading. */
 function OlhoSecao({ children }: { children: string }): ReactElement {
@@ -62,7 +66,7 @@ export default async function Home(): Promise<ReactElement> {
         {destaque ? (
           <div className="grid gap-6 md:grid-cols-2 md:items-center">
             <CmsImage
-              media={destaque.capa}
+              media={capaDoInforme(destaque)}
               square
               sizes="(max-width: 768px) 100vw, 540px"
               placeholderLabel="capa do destaque a confirmar"
@@ -70,7 +74,7 @@ export default async function Home(): Promise<ReactElement> {
 
             <div className="flex flex-col gap-4">
               <p className="text-sm uppercase tracking-wide text-[color:var(--color-verde)]">
-                {destaque.etiqueta}
+                {nomesEtiquetas(destaque.etiquetas).join(' · ')}
               </p>
 
               {/* Único <h1> da página quando há destaque (Req 20.2). */}
@@ -124,8 +128,9 @@ export default async function Home(): Promise<ReactElement> {
         )}
       </section>
 
-      {/* ---- CTA de pedidos: atalho direto para /pedido ------------------- */}
+      {/* ---- CTAs de pedidos: atalhos para /pedido e para a pimenta ------- */}
       <PedidoCta />
+      <PedidoPimentaCta />
 
       {/* ---- Informes recentes (Req 10.2) --------------------------------- */}
       {recentes.length > 0 ? (

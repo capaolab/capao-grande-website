@@ -146,9 +146,11 @@ import type {
   Cardapio,
   Configuracoe,
   Cronologia,
+  Etiqueta,
   Informe,
   Media,
 } from '../src/payload-types'
+import type { SecaoAgrupada } from '../lib/cardapio'
 
 function media(alt: string, url = '/media/exemplo.png'): Media {
   return {
@@ -162,13 +164,17 @@ function media(alt: string, url = '/media/exemplo.png'): Media {
   } as unknown as Media
 }
 
+function etiqueta(nome: string): Etiqueta {
+  return { id: nome.length, nome, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' }
+}
+
 function informe(overrides: Partial<Informe> = {}): Informe {
   return {
     id: 10,
     titulo: 'Reflorestamento avança no Capão',
     slug: 'reflorestamento-avanca',
     data: '2024-05-01T00:00:00.000Z',
-    etiqueta: 'Reflorestamento',
+    etiquetas: [etiqueta('Reflorestamento')],
     resumo: 'Plantamos mais mudas nativas nesta estação.',
     corpo: { root: { type: 'root', children: [], direction: 'ltr', format: '', indent: 0, version: 1 } },
     capa: media('Mudas nativas recém-plantadas'),
@@ -184,23 +190,24 @@ const DESTAQUE = informe({
   id: 1,
   titulo: 'Novo cardápio de verão',
   slug: 'cardapio-de-verao',
-  etiqueta: 'Cardápio',
+  etiquetas: [etiqueta('Cardápio')],
   destaque: true,
 })
 
 const RECENTES: Informe[] = [
-  informe({ id: 2, titulo: 'Colheita da horta', slug: 'colheita-da-horta', etiqueta: 'Horta' }),
+  informe({ id: 2, titulo: 'Colheita da horta', slug: 'colheita-da-horta', etiquetas: [etiqueta('Horta')] }),
   // Um recente SEM capa e SEM resumo: exercita placeholders no InformeCard.
-  informe({ id: 3, titulo: 'Notas do apiário', slug: 'notas-do-apiario', etiqueta: 'Apiário', capa: null, resumo: null }),
-  informe({ id: 4, titulo: 'Compostagem em dia', slug: 'compostagem-em-dia', etiqueta: 'Compostagem' }),
+  informe({ id: 3, titulo: 'Notas do apiário', slug: 'notas-do-apiario', etiquetas: [etiqueta('Apiário')], capa: null, resumo: null }),
+  informe({ id: 4, titulo: 'Compostagem em dia', slug: 'compostagem-em-dia', etiquetas: [etiqueta('Compostagem')] }),
 ]
 
-const CARDAPIO: Array<{ secao: Cardapio['secao']; itens: Cardapio[] }> = [
+const CARDAPIO: SecaoAgrupada<Cardapio>[] = [
   {
     secao: 'Bebidas',
+    tipo: 'comum',
     itens: [
-      { id: 1, secao: 'Bebidas', nome: 'Suco de laranja', detalhe: 'jarra 1,5 l', preco: 20, ordem: 1, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
-      { id: 2, secao: 'Bebidas', nome: 'Refrigerante', detalhe: null, preco: 8, ordem: 2, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
+      { id: 1, secao: 3, nome: 'Suco de laranja', detalhe: 'jarra 1,5 l', preco: 20, ordem: 1, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
+      { id: 2, secao: 3, nome: 'Refrigerante', detalhe: null, preco: 8, ordem: 2, ativo: true, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' } as unknown as Cardapio,
     ],
   },
 ]

@@ -16,6 +16,8 @@
 import Link from 'next/link'
 import type { ReactElement } from 'react'
 
+import { nomesEtiquetas } from '@/lib/etiquetas'
+import { capaDoInforme } from '@/lib/unsplash'
 import type { Informe } from '@/src/payload-types'
 
 import { CmsImage } from './CmsImage'
@@ -64,7 +66,7 @@ export function InformeCard({ informe, className }: InformeCardProps): ReactElem
     <article className={cardClasses}>
       {/* Capa em proporção 1:1 (Req 5.3); placeholder listrado se ausente. */}
       <CmsImage
-        media={informe.capa}
+        media={capaDoInforme(informe)}
         square
         sizes="(max-width: 640px) 100vw, 320px"
         placeholderLabel="capa a confirmar"
@@ -72,7 +74,7 @@ export function InformeCard({ informe, className }: InformeCardProps): ReactElem
 
       <div className="flex items-center gap-3 text-sm">
         <span className="uppercase tracking-wide text-[color:var(--color-verde)]">
-          {informe.etiqueta}
+          {nomesEtiquetas(informe.etiquetas).join(' · ')}
         </span>
         {dataFormatada ? (
           <time

@@ -69,6 +69,7 @@ export default async function PedidoPage(): Promise<ReactElement> {
   // Itens do cardápio em forma serializável mínima para o Client Component.
   const secoes: SecaoPedido[] = grupos.map((grupo) => ({
     secao: grupo.secao,
+    tipo: grupo.tipo,
     itens: grupo.itens.map((item) => ({
       id: item.id,
       nome: item.nome,

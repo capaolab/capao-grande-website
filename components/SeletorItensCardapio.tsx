@@ -6,8 +6,8 @@
 //
 // Componente CONTROLADO (o estado `selecionados` fica no formulário pai):
 //  - Seletor tipo TAGS: itens agrupados por seção como chips selecionáveis
-//    (aria-pressed); a seção Tamanhos NÃO aparece como seção selecionável —
-//    seus itens são o seletor de tamanho das pizzas.
+//    (aria-pressed); a seção de tipo `tamanhos` NÃO aparece como seção
+//    selecionável — seus itens são o seletor de tamanho das pizzas.
 //  - Resumo: cada item selecionado vira uma linha com stepper de quantidade
 //    (+/−), botão remover e, para PIZZAS (preco: null), seletor de tamanho
 //    OBRIGATÓRIO (radios nativos; o preço da pizza vem do tamanho).
@@ -18,7 +18,7 @@
 
 import { useMemo, type ReactElement } from 'react'
 
-import { renderPreco, type SecaoCardapio } from '@/lib/cardapio'
+import { renderPreco, type TipoSecao } from '@/lib/cardapio'
 import { calcularSubtotal, type ItemCardapioMinimo, type ItemPedidoEntrada } from '@/lib/pedidos'
 
 /** Item do cardápio no formato serializável recebido da página (Server → Client). */
@@ -32,7 +32,9 @@ export interface ItemCardapioPedido {
 
 /** Seção do cardápio com os itens selecionáveis (forma serializável). */
 export interface SecaoPedido {
-  secao: SecaoCardapio
+  /** Nome da seção. */
+  secao: string
+  tipo: TipoSecao
   itens: ItemCardapioPedido[]
 }
 
@@ -69,7 +71,7 @@ export function useSelecaoCardapio(secoes: SecaoPedido[], selecionados: ItemSele
       secoes.flatMap((secao) =>
         secao.itens.map((item) => ({
           id: item.id,
-          secao: secao.secao,
+          tipoSecao: secao.tipo,
           nome: item.nome,
           preco: item.preco,
         })),
@@ -123,8 +125,8 @@ export function SeletorItensCardapio({
 }: SeletorItensCardapioProps): ReactElement {
   const { itensPorId } = useSelecaoCardapio(secoes, selecionados)
 
-  const secoesSelecionaveis = secoes.filter((s) => s.secao !== 'Tamanhos')
-  const tamanhos = secoes.find((s) => s.secao === 'Tamanhos')?.itens ?? []
+  const secoesSelecionaveis = secoes.filter((s) => s.tipo !== 'tamanhos')
+  const tamanhos = secoes.find((s) => s.tipo === 'tamanhos')?.itens ?? []
 
   function estaSelecionado(id: number): boolean {
     return selecionados.some((sel) => sel.id === id)

@@ -2,19 +2,17 @@ import { describe, expect, it } from 'vitest'
 import fc from 'fast-check'
 import {
   agruparCardapio,
-  ORDEM_SECOES,
   type ItemAgrupavel,
-  type SecaoCardapio,
+  type SecaoMinima,
 } from '../lib/cardapio'
 
 // Item de teste: além da forma mínima `ItemAgrupavel`, carrega um `id` único
 // para permitir verificar contagens (multiset) e estabilidade da ordenação.
+// A seção vem sempre populada, como na leitura com depth (secoes-cardapio.md).
 interface ItemTeste extends ItemAgrupavel {
   id: number
+  secao: SecaoMinima
 }
-
-// Gerador de seção sobre os 4 valores fixos do cardápio.
-const secaoArb = fc.constantFrom<SecaoCardapio>('Pizzas', 'Tamanhos', 'Bebidas', 'Vinhos')
 
 // `ordem` pode ser um número, null ou undefined (campo opcional/anulável).
 const ordemArb = fc.oneof(
@@ -23,13 +21,23 @@ const ordemArb = fc.oneof(
   fc.constant(undefined),
 )
 
+// Seções cadastradas: nomes distintos e `ordem` arbitrária (inclusive
+// empatada ou ausente).
+const secoesArb = fc
+  .array(ordemArb, { minLength: 1, maxLength: 6 })
+  .map((ordens) =>
+    ordens.map((ordem, i): SecaoMinima => ({ id: i + 1, nome: `Seção ${i + 1}`, ordem, tipo: 'comum' })),
+  )
+
 // Array arbitrário de itens com `id` único (índice no array), para que o
 // multiset de ids identifique cada item sem colisão.
-const itensArb = fc
-  .array(fc.record({ secao: secaoArb, ordem: ordemArb }), { maxLength: 60 })
-  .map((itens) => itens.map((it, id): ItemTeste => ({ ...it, id })))
+const itensArb = secoesArb.chain((secoes) =>
+  fc
+    .array(fc.record({ secao: fc.constantFrom(...secoes), ordem: ordemArb }), { maxLength: 60 })
+    .map((itens) => itens.map((it, id): ItemTeste => ({ ...it, id }))),
+)
 
-const ordemDe = (item: ItemAgrupavel): number => item.ordem ?? 0
+const ordemDe = (item: { ordem?: number | null }): number => item.ordem ?? 0
 
 describe('Feature: payload-cms-integration, Property 6: Agrupamento do cardápio por seção preservando ordem', () => {
   // Validates: Requirements 14.1, 14.2, 6.5
@@ -67,23 +75,25 @@ describe('Feature: payload-cms-integration, Property 6: Agrupamento do cardápio
         const grupos = agruparCardapio(itens)
         for (const grupo of grupos) {
           for (const item of grupo.itens) {
-            expect(item.secao).toBe(grupo.secao)
+            expect(item.secao.nome).toBe(grupo.secao)
           }
         }
       }),
     )
   })
 
-  it('seções aparecem na ordem canônica e uma seção existe sse e somente se tem ao menos um item', () => {
+  it('seções aparecem por (ordem ?? 0) da seção e uma seção existe sse e somente se tem ao menos um item', () => {
     fc.assert(
       fc.property(itensArb, (itens) => {
         const grupos = agruparCardapio(itens)
         const secoesSaida = grupos.map((g) => g.secao)
 
-        // Ordem canônica: a sequência de seções é uma subsequência de ORDEM_SECOES.
-        const indices = secoesSaida.map((s) => ORDEM_SECOES.indexOf(s))
-        for (let i = 1; i < indices.length; i++) {
-          expect(indices[i]).toBeGreaterThan(indices[i - 1])
+        // Seções não decrescentes pelo `ordem` da seção.
+        const secaoPorNome = new Map(itens.map((i) => [i.secao.nome, i.secao]))
+        for (let i = 1; i < secoesSaida.length; i++) {
+          expect(ordemDe(secaoPorNome.get(secoesSaida[i - 1])!)).toBeLessThanOrEqual(
+            ordemDe(secaoPorNome.get(secoesSaida[i])!),
+          )
         }
 
         // Nenhum grupo vazio.
@@ -92,11 +102,8 @@ describe('Feature: payload-cms-integration, Property 6: Agrupamento do cardápio
         }
 
         // Uma seção aparece sse há ao menos um item de entrada com essa seção.
-        const secoesEntrada = new Set(itens.map((i) => i.secao))
-        for (const secao of ORDEM_SECOES) {
-          const presente = secoesSaida.includes(secao)
-          expect(presente).toBe(secoesEntrada.has(secao))
-        }
+        expect(new Set(secoesSaida)).toEqual(new Set(itens.map((i) => i.secao.nome)))
+        expect(secoesSaida.length).toBe(new Set(secoesSaida).size)
       }),
     )
   })
@@ -109,7 +116,7 @@ describe('Feature: payload-cms-integration, Property 6: Agrupamento do cardápio
           // Ordem de entrada dos itens desta seção (por id crescente, já que
           // id = índice de entrada).
           const entradaDaSecao = itens
-            .filter((i) => i.secao === grupo.secao)
+            .filter((i) => i.secao.nome === grupo.secao)
             .map((i) => i.id)
 
           // Para cada valor de `ordem`, a subsequência de ids na saída deve

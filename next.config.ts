@@ -16,6 +16,11 @@ const nextConfig: NextConfig = {
   // sobrescreve este valor com `output: "export"`.
   output: "standalone",
   devIndicators: false,
+  // Capa de informe pelo link do Unsplash (docs/features/capa-unsplash.md).
+  // Sem `search`: as URLs do Unsplash levam parâmetros de recorte variáveis.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com", pathname: "/**" }],
+  },
   // Só vale para `next dev`: libera o HMR/recursos de dev quando o site é
   // aberto por outro aparelho da rede local (ex.: celular em
   // http://192.168.0.x:3000). Outros hosts podem ser adicionados via

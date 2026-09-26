@@ -50,10 +50,23 @@ RUN DATABASE_URI=postgres://placeholder:placeholder@localhost:5432/placeholder \
     PAYLOAD_SECRET=placeholder-build-secret \
     npm run build
 
+# ---- Migrations ----
+# One-off job that applies pending migrations (src/migrations) with the
+# Payload CLI. Published next to the app image as `<version>-migrate`, so
+# the schema is migrated by the exact same release before the app starts
+# (deploy/deploy.sh). The standalone `runner` image has no CLI and no
+# longer migrates on startup. DATABASE_URI/PAYLOAD_SECRET come at runtime.
+FROM base AS migrate
+ENV NODE_ENV=production
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+USER node
+CMD ["npm", "run", "payload", "migrate"]
+
 # ---- Production ----
 # Runs the Next.js standalone server produced by `output: "standalone"`.
-# Pending migrations (src/migrations) are applied on startup by Payload's
-# `prodMigrations` (src/payload.config.ts).
+# Migrations are NOT applied here: run the `migrate` image first.
 FROM base AS runner
 ENV NODE_ENV=production
 # Uploads dir (Payload `media` collection), owned by "node" so a named

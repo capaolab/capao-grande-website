@@ -157,7 +157,7 @@ describe.skipIf(!dbAvailable)('invariantes do seed (Payload + Postgres)', () => 
       const { docs, totalDocs } = await payload.find({
         collection: 'cardapio',
         limit: 0,
-        depth: 0,
+        depth: 1, // seção populada (secoes-cardapio.md)
         locale: 'pt',
       })
 
@@ -166,8 +166,10 @@ describe.skipIf(!dbAvailable)('invariantes do seed (Payload + Postgres)', () => 
       expect(docs.length).toBeGreaterThanOrEqual(1)
 
       const detalhes = docs.map((d) => (d as { detalhe?: string }).detalhe)
-      const pizzas = docs.filter((d) => (d as { secao?: string }).secao === 'Pizzas')
-      const tamanhos = docs.filter((d) => (d as { secao?: string }).secao === 'Tamanhos')
+      const tipoSecao = (d: (typeof docs)[number]) =>
+        typeof d.secao === 'object' ? d.secao.tipo : null
+      const pizzas = docs.filter((d) => tipoSecao(d) === 'por-tamanho')
+      const tamanhos = docs.filter((d) => tipoSecao(d) === 'tamanhos')
 
       // Pizzas: preço NULL (preço por tamanho — Tarefa 6; o antigo texto
       // "ver tamanhos" do Req 6.3 não existe mais no banco).

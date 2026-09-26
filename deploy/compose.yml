@@ -5,11 +5,26 @@
 # tem o seu arquivo de variáveis (.env.staging, .env.production) e o seu
 # nome de projeto, então os dois podem coexistir no mesmo host.
 #
+# O serviço `migrate` (perfil "migrate") aplica as migrations da mesma
+# versão antes de o app subir; `up` sem o perfil não o inicia.
+#
 # Uso (ou via ./deploy/deploy.sh <ambiente> <versão>):
-#   IMAGE_TAG=1.2.0 ENV_FILE=.env.staging docker compose -f deploy/compose.yml \
-#     --env-file deploy/.env.staging -p capao-staging up -d
+#   export IMAGE_TAG=1.2.0 ENV_FILE=deploy/.env.staging
+#   docker compose -f deploy/compose.yml --env-file deploy/.env.staging \
+#     -p capao-staging --profile migrate run --rm migrate
+#   docker compose -f deploy/compose.yml --env-file deploy/.env.staging \
+#     -p capao-staging up -d app
 
 services:
+  migrate:
+    image: "ghcr.io/capaolab/capao-grande-website:${IMAGE_TAG:?defina IMAGE_TAG, ex. 1.2.0}-migrate"
+    env_file: ${ENV_FILE:-.env.staging}
+    networks:
+      - db
+    profiles:
+      - migrate
+    restart: "no"
+
   app:
     image: "ghcr.io/capaolab/capao-grande-website:${IMAGE_TAG:?defina IMAGE_TAG, ex. 1.2.0}"
     env_file: ${ENV_FILE:-.env.staging}
@@ -33,7 +48,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      # Primeira subida aplica migrations pendentes (prodMigrations).
       start_period: 60s
 
 volumes:

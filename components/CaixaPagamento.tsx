@@ -31,7 +31,13 @@ import {
   type FormaPagamento,
   type ResultadoRateio,
 } from '@/lib/caixa'
-import { partesDaConta, salvarPagamentos, type ContaCaixa, type ParteConta } from '@/lib/caixa-api'
+import {
+  partesDaConta,
+  ROTULO_STATUS_CONTA,
+  salvarPagamentos,
+  type ContaCaixa,
+  type ParteConta,
+} from '@/lib/caixa-api'
 
 export interface CaixaPagamentoProps {
   conta: ContaCaixa
@@ -151,7 +157,7 @@ export function CaixaPagamento({
           <span
             className={`font-sans text-sm ${conta.status === 'paga' ? 'text-verde' : 'text-paragrafo'}`}
           >
-            {conta.status === 'paga' ? 'Paga' : 'Aberta'}
+            {ROTULO_STATUS_CONTA[conta.status]}
           </span>
         </div>
         <ul className="flex flex-col gap-1 font-sans text-sm text-paragrafo">

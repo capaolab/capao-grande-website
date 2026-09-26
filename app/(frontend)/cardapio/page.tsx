@@ -41,7 +41,7 @@ export default async function CardapioPage(): Promise<ReactElement> {
       {grupos.length > 0 ? (
         <div className="flex flex-col gap-12">
           {grupos.map((grupo) => (
-            <MenuSection key={grupo.secao} secao={grupo.secao} itens={grupo.itens} />
+            <MenuSection key={grupo.secao} secao={grupo.secao} tipo={grupo.tipo} itens={grupo.itens} />
           ))}
         </div>
       ) : (

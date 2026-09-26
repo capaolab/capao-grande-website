@@ -23,6 +23,7 @@ export default async function CaixaPage(): Promise<ReactElement> {
 
   const secoes: SecaoPedido[] = grupos.map((grupo) => ({
     secao: grupo.secao,
+    tipo: grupo.tipo,
     itens: grupo.itens.map((item) => ({
       id: item.id,
       nome: item.nome,

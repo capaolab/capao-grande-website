@@ -30,7 +30,14 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 
-import { CARDAPIO, CONFIGURACOES, CRONOLOGIA, INFORMES, richText } from '@/content/seed-data'
+import {
+  CARDAPIO,
+  CONFIGURACOES,
+  CRONOLOGIA,
+  INFORMES,
+  richText,
+  SECOES_CARDAPIO,
+} from '@/content/seed-data'
 
 // ---------------------------------------------------------------------------
 // Execução do seed.
@@ -76,7 +83,16 @@ async function seed() {
 
   // Idempotência (Req 9.1): apaga tudo antes de reinserir. `where` com um
   // predicado sempre-verdadeiro (`id exists`) casa todos os documentos.
-  const colecoes = ['informes', 'cardapio', 'cronologia'] as const
+  // `etiquetas` vem depois de `informes` e `secoes-cardapio` depois de
+  // `cardapio`: etiqueta/seção em uso não pode ser removida
+  // (etiquetas-informes.md, RN-E03; secoes-cardapio.md, RN-S05).
+  const colecoes = [
+    'informes',
+    'etiquetas',
+    'cardapio',
+    'secoes-cardapio',
+    'cronologia',
+  ] as const
   for (const collection of colecoes) {
     const { docs } = await payload.find({ collection, limit: 0, depth: 0 })
     log(`[seed] limpando ${docs.length} doc(s) de "${collection}"`)
@@ -84,6 +100,13 @@ async function seed() {
       collection,
       where: { id: { exists: true } },
     })
+  }
+
+  // Etiquetas usadas pelos informes do seed (etiquetas-informes.md).
+  const etiquetaIds = new Map<string, number>()
+  for (const nome of new Set(INFORMES.map((inf) => inf.etiqueta))) {
+    const etiqueta = await payload.create({ collection: 'etiquetas', data: { nome } })
+    etiquetaIds.set(nome, etiqueta.id)
   }
 
   // Informes — cria com `data`/`en` e apenas UM `destaque` (Req 9.2). O `slug`
@@ -95,7 +118,7 @@ async function seed() {
       locale: 'pt',
       data: {
         titulo: inf.titulo,
-        etiqueta: inf.etiqueta,
+        etiquetas: [etiquetaIds.get(inf.etiqueta)!],
         data: inf.data,
         destaque: inf.destaque,
         publicado: inf.publicado,
@@ -119,6 +142,13 @@ async function seed() {
     }
   }
 
+  // Seções do cardápio (secoes-cardapio.md).
+  const secaoIds = new Map<string, number>()
+  for (const secao of SECOES_CARDAPIO) {
+    const criada = await payload.create({ collection: 'secoes-cardapio', data: secao })
+    secaoIds.set(secao.nome, criada.id)
+  }
+
   // Cardápio — textos verbatim (Req 9.3); `preco` numérico (Tarefa 6 de
   // docs/features/delivery-pedidos.md).
   for (const item of CARDAPIO) {
@@ -126,7 +156,7 @@ async function seed() {
       collection: 'cardapio',
       locale: 'pt',
       data: {
-        secao: item.secao,
+        secao: secaoIds.get(item.secao)!,
         nome: item.nome,
         detalhe: item.detalhe,
         preco: item.preco, // number | null (null = pizzas, preço por tamanho)

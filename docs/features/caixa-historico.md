@@ -21,12 +21,16 @@ redireciona para a própria área.
 
 - RN-C01: os itens da mesa são lançados **de uma vez, no caixa**, quando a mesa
   vai pagar. Não existe comanda aberta durante o atendimento.
+  **Substituída por `caixa-contas-fechadas.md`**: a conta fechada fica numa
+  lista e pode ser reaberta antes de seguir para o pagamento.
 - RN-C02: o valor da conta é calculado **no servidor** com os preços atuais do
   cardápio (mesma regra dos pedidos de delivery). A conta aplica uma taxa de
   serviço opcional de 10% sobre o subtotal, arredondada ao centavo, e um
   desconto manual em R$, que não pode passar do valor da conta. Itens e
   valores ficam **congelados** depois de gravados, porque mudar o preço no
   cardápio não pode alterar uma conta já rateada.
+  **Alterada por `caixa-contas-fechadas.md`**: o congelamento acontece ao
+  seguir para o pagamento, quando o caixa também define serviço e desconto.
 - RN-C03: o funcionário pode informar o número da mesa (opcional) e
   observações. A conta recebe um código curto (ex.: `A3F7`).
 - RN-C04: o pagamento pode ser dividido por N pessoas. Por padrão as partes
@@ -43,6 +47,8 @@ redireciona para a própria área.
 - RN-C07: a conta fica `aberta` até todas as partes estarem pagas e então vira
   `paga`. Esse status é derivado pelo servidor. Contas abertas aparecem no
   topo do caixa para retomar o pagamento.
+  **Alterada por `caixa-contas-fechadas.md`**: `aberta` passou a se chamar
+  `pagamento`, e as contas aparecem na aba "Contas".
 - RN-C08: só admin e funcionário criam, leem e alteram contas do caixa, e só o
   admin remove.
 - RN-C09: o histórico mostra, para o dia escolhido:

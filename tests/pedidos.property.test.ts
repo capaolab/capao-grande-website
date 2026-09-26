@@ -53,11 +53,11 @@ describe('gerarCodigoPedido', () => {
 // Cardápio sintético fixo: dois itens de preço fixo, uma pizza sem preço
 // próprio e dois tamanhos (que carregam o preço das pizzas).
 const CARDAPIO: ItemCardapioMinimo[] = [
-  { id: 1, secao: 'Bebidas', nome: 'Suco pequeno', preco: 8 },
-  { id: 2, secao: 'Vinhos', nome: 'Rio Sol', preco: 40 },
-  { id: 3, secao: 'Pizzas', nome: 'Pizza Integral do Capão', preco: null },
-  { id: 4, secao: 'Tamanhos', nome: 'Pequena', preco: 30 },
-  { id: 5, secao: 'Tamanhos', nome: 'Grande', preco: 60 },
+  { id: 1, tipoSecao: 'comum', nome: 'Suco pequeno', preco: 8 },
+  { id: 2, tipoSecao: 'comum', nome: 'Rio Sol', preco: 40 },
+  { id: 3, tipoSecao: 'por-tamanho', nome: 'Pizza Integral do Capão', preco: null },
+  { id: 4, tipoSecao: 'tamanhos', nome: 'Pequena', preco: 30 },
+  { id: 5, tipoSecao: 'tamanhos', nome: 'Grande', preco: 60 },
 ]
 
 const quantidadeArb = fc.integer({ min: 1, max: 20 })

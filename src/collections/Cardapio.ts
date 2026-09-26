@@ -3,7 +3,8 @@ import type { CollectionConfig } from 'payload'
 // Colecao_Cardapio (Requisito 6): itens do cardápio da pizzaria.
 //
 // Campos (Req 6.1): secao, nome, detalhe, preco, ordem, ativo.
-// - `secao` restrito às 4 opções fixas (Req 6.2).
+// - `secao` aponta para a collection `secoes-cardapio`
+//   (docs/features/secoes-cardapio.md, substitui as 4 opções fixas do Req 6.2).
 // - `detalhe` localizado pt/en (Req 3.4).
 // - `preco` é NÚMERO (não obrigatório) — decisão registrada em
 //   docs/features/delivery-pedidos.md (P1 / Tarefa 6): o antigo Requisito 6.3
@@ -16,11 +17,6 @@ import type { CollectionConfig } from 'payload'
 //   a renderização pública exibe "ver tamanhos" nesse caso (MenuSection).
 // - `ordem` (number) ordena os itens dentro de cada seção (Req 6.5).
 // - `ativo` (checkbox) filtra a listagem pública na camada de queries (Req 6.6).
-
-// As quatro opções fixas de `secao` (Req 6.2). Os `value`s são preservados
-// exatamente como no design/requisitos para que leitura pública e seed usem
-// os mesmos valores.
-const SECOES = ['Pizzas', 'Tamanhos', 'Bebidas', 'Vinhos'] as const
 
 export const Cardapio: CollectionConfig = {
   slug: 'cardapio',
@@ -36,10 +32,10 @@ export const Cardapio: CollectionConfig = {
   fields: [
     {
       name: 'secao',
-      type: 'select',
-      required: true, // Req 6.2: seção restrita às opções fixas
+      type: 'relationship',
+      relationTo: 'secoes-cardapio',
+      required: true,
       label: 'Seção',
-      options: SECOES.map((secao) => ({ label: secao, value: secao })),
     },
     {
       name: 'nome',

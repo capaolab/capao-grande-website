@@ -6,9 +6,10 @@
 // docs/features/delivery-pedidos.md — o Req 6.3/14.4 de preço-texto foi
 // revogado): a saída ("R$ 30,00") é visualmente idêntica ao cardápio impresso.
 //
-// Itens com `preco: null`: quando a seção é 'Pizzas', exibe o texto "ver
-// tamanhos" (fidelidade ao cardápio impresso — o preço da pizza depende do
-// tamanho, seção Tamanhos); nas demais seções, cai no <Placeholder>.
+// Itens com `preco: null`: quando a seção é do tipo `por-tamanho` (Pizzas),
+// exibe o texto "ver tamanhos" (fidelidade ao cardápio impresso — o preço da
+// pizza depende do tamanho, secoes-cardapio.md); nas demais seções, cai no
+// <Placeholder>.
 // Placeholders (Req 19): quando `nome`, `detalhe` ou `preco` estão ausentes,
 // exibe <Placeholder> em vez de fabricar dados. O agrupamento/ordenação por
 // `ordem` é feito por `agruparCardapio` (lib/cardapio.ts) na camada de página;
@@ -21,19 +22,21 @@ import type { ReactElement } from 'react'
 
 import type { Cardapio } from '@/src/payload-types'
 
-import { renderPreco, type SecaoCardapio } from '@/lib/cardapio'
+import { renderPreco, type TipoSecao } from '@/lib/cardapio'
 import { Placeholder } from './Placeholder'
 
 export interface MenuSectionProps {
-  /** Nome da seção (Pizzas, Tamanhos, Bebidas, Vinhos). */
-  secao: SecaoCardapio
+  /** Nome da seção (ex.: Pizzas, Tamanhos, Bebidas, Vinhos). */
+  secao: string
+  /** Tipo da seção: `por-tamanho` exibe "ver tamanhos" em itens sem preço. */
+  tipo: TipoSecao
   /** Itens da seção, já ordenados por `ordem` (ver `agruparCardapio`). */
   itens: Cardapio[]
   /** Classes utilitárias adicionais para a seção. */
   className?: string
 }
 
-export function MenuSection({ secao, itens, className }: MenuSectionProps): ReactElement {
+export function MenuSection({ secao, tipo, itens, className }: MenuSectionProps): ReactElement {
   const sectionClasses = ['flex flex-col gap-4', className].filter(Boolean).join(' ')
 
   return (
@@ -63,14 +66,14 @@ export function MenuSection({ secao, itens, className }: MenuSectionProps): Reac
             </div>
 
             {/* PREÇO À DIREITA, formatado via renderPreco (Req 14.3; Tarefa 6
-                de delivery-pedidos.md). `preco: null` na seção Pizzas exibe
+                de delivery-pedidos.md). `preco: null` em seção `por-tamanho` exibe
                 "ver tamanhos" (o preço da pizza depende do tamanho); nas demais
                 seções, preço ausente cai no placeholder (Req 19). */}
             {item.preco != null ? (
               <span className="whitespace-nowrap text-right font-serif text-[color:var(--color-marrom)]">
                 {renderPreco(item.preco)}
               </span>
-            ) : secao === 'Pizzas' ? (
+            ) : tipo === 'por-tamanho' ? (
               <span className="whitespace-nowrap text-right font-serif text-[color:var(--color-marrom)]">
                 ver tamanhos
               </span>

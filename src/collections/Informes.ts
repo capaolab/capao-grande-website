@@ -1,28 +1,18 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, TextFieldSingleValidation } from 'payload'
+
+import { ehUrlImagemUnsplash } from '@/lib/unsplash'
 
 import { idsParaDesmarcarDestaque, type InformeDestaqueState } from './informes-destaque'
 
 // Colecao_Informes (Requisito 5): publicações/notícias do site.
 //
-// Campos (Req 5.1): titulo, slug, data, etiqueta, destaque, resumo, corpo,
+// Campos (Req 5.1): titulo, slug, data, etiquetas, destaque, resumo, corpo,
 // capa, publicado. Localização pt/en em `titulo`, `resumo` e `corpo` (Req 3.3);
 // `resumo` limitado a 200 caracteres (Req 5.6); `corpo` é rich text lexical
 // herdando o editor registrado no nível da config (Req 5.7); `capa` é upload
-// de imagem 1:1 (Req 5.3); `etiqueta` restrito às 7 opções fixas (Req 5.2);
-// `destaque` é checkbox com invariante de unicidade (Req 5.4, 5.5).
-
-// As sete opções fixas de `etiqueta` (Req 5.2). Os `value`s são preservados
-// exatamente como especificado no design/requisitos, incluindo acentos, para
-// que a leitura pública e o seed usem os mesmos valores.
-const ETIQUETAS = [
-  'Funcionamento',
-  'Reflorestamento',
-  'Horta',
-  'Compostagem',
-  'Apiário',
-  'Viveiro',
-  'Cardápio',
-] as const
+// de imagem 1:1 (Req 5.3); `etiquetas` aponta para a collection `etiquetas`
+// (docs/features/etiquetas-informes.md, substitui as 7 opções fixas do Req
+// 5.2); `destaque` é checkbox com invariante de unicidade (Req 5.4, 5.5).
 
 // Slugify simples: normaliza acentos, minúsculas, troca não-alfanuméricos por
 // hífen e remove hífens nas pontas. Usado pelo hook de geração de slug.
@@ -41,11 +31,23 @@ export function slugify(input: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
+// Capa pelo Unsplash: só o link direto da imagem, e com texto alternativo
+// (Req 20.1) sempre que houver link.
+const validarUrlUnsplash: TextFieldSingleValidation = (valor) =>
+  !valor ||
+  ehUrlImagemUnsplash(valor) ||
+  'Use o link direto da imagem, que começa com https://images.unsplash.com/.'
+
+const validarAltUnsplash: TextFieldSingleValidation = (valor, { siblingData }) =>
+  !(siblingData as { url?: string | null }).url ||
+  Boolean(valor?.trim()) ||
+  'Descreva a imagem (texto alternativo obrigatório).'
+
 export const Informes: CollectionConfig = {
   slug: 'informes',
   admin: {
     useAsTitle: 'titulo',
-    defaultColumns: ['titulo', 'etiqueta', 'data', 'destaque', 'publicado'],
+    defaultColumns: ['titulo', 'etiquetas', 'data', 'destaque', 'publicado'],
   },
   access: {
     // Leitura liberada; as leituras públicas filtram por `publicado` na camada
@@ -94,11 +96,12 @@ export const Informes: CollectionConfig = {
       label: 'Data',
     },
     {
-      name: 'etiqueta',
-      type: 'select',
+      name: 'etiquetas',
+      type: 'relationship',
+      relationTo: 'etiquetas',
+      hasMany: true,
       required: true,
-      label: 'Etiqueta',
-      options: ETIQUETAS.map((etiqueta) => ({ label: etiqueta, value: etiqueta })),
+      label: 'Etiquetas',
     },
     {
       name: 'resumo',
@@ -121,6 +124,31 @@ export const Informes: CollectionConfig = {
       admin: {
         description: 'Imagem de capa em proporção 1:1.',
       },
+    },
+    {
+      // Alternativa ao upload (docs/features/capa-unsplash.md): link direto de
+      // uma imagem do Unsplash. Se o informe tiver os dois, vale o upload.
+      name: 'capaUnsplash',
+      type: 'group',
+      label: 'Capa pelo Unsplash',
+      admin: {
+        description:
+          'Use quando não houver imagem enviada acima. No Unsplash, clique com o botão direito na foto e escolha "Copiar endereço da imagem" (o link começa com https://images.unsplash.com/).',
+      },
+      fields: [
+        {
+          name: 'url',
+          type: 'text',
+          label: 'Link da imagem',
+          validate: validarUrlUnsplash,
+        },
+        {
+          name: 'alt',
+          type: 'text',
+          label: 'Texto alternativo',
+          validate: validarAltUnsplash,
+        },
+      ],
     },
     {
       name: 'destaque',

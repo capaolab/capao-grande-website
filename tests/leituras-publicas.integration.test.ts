@@ -101,6 +101,11 @@ const runId = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`
 
 describe.skipIf(!dbAvailable)('leituras públicas (Payload + Postgres)', () => {
   let payload: Payload
+  // Etiqueta e seção criadas junto de cada informe/item (e não no
+  // beforeAll): o seed.integration roda em paralelo e apaga os cadastros sem
+  // uso, então elas precisam ficar em uso desde a criação.
+  const createdEtiquetaIds: number[] = []
+  const createdSecaoIds: number[] = []
   // Rastreamento global de ids criados (salvaguarda de cleanup no afterAll).
   const createdInformeIds: (number | string)[] = []
   const createdCardapioIds: (number | string)[] = []
@@ -151,13 +156,20 @@ describe.skipIf(!dbAvailable)('leituras públicas (Payload + Postgres)', () => {
     resumoPt?: string
     resumoEn?: string
   }): Promise<{ id: number | string; slug?: string | null }> {
+    // Informe exige ao menos uma etiqueta (etiquetas-informes.md).
+    const etiqueta = await payload.create({
+      collection: 'etiquetas',
+      data: { nome: `Etiqueta ${data.titulo}` },
+    })
+    createdEtiquetaIds.push(etiqueta.id)
+
     // Cria em 'pt' (locale padrão). resumo pt opcional.
     const doc = await payload.create({
       collection: 'informes',
       locale: 'pt',
       data: {
         titulo: data.titulo,
-        etiqueta: 'Funcionamento',
+        etiquetas: [etiqueta.id],
         publicado: data.publicado,
         ...(data.resumoPt != null ? { resumo: data.resumoPt } : {}),
       },
@@ -181,11 +193,18 @@ describe.skipIf(!dbAvailable)('leituras públicas (Payload + Postgres)', () => {
     nome: string
     ativo: boolean
   }): Promise<{ id: number | string }> {
+    // Item do cardápio exige uma seção (secoes-cardapio.md).
+    const secao = await payload.create({
+      collection: 'secoes-cardapio',
+      data: { nome: `Seção ${data.nome}`, tipo: 'comum' },
+    })
+    createdSecaoIds.push(secao.id)
+
     const doc = await payload.create({
       collection: 'cardapio',
       locale: 'pt',
       data: {
-        secao: 'Pizzas',
+        secao: secao.id,
         nome: data.nome,
         // Preço numérico (Tarefa 6 de delivery-pedidos.md — Req 6.3 revogado).
         preco: 30,
@@ -222,6 +241,8 @@ describe.skipIf(!dbAvailable)('leituras públicas (Payload + Postgres)', () => {
   afterAll(async () => {
     for (const id of createdInformeIds) await apagarInforme(id)
     for (const id of createdCardapioIds) await apagarCardapio(id)
+    for (const id of createdEtiquetaIds) await payload?.delete({ collection: 'etiquetas', id }).catch(() => {})
+    for (const id of createdSecaoIds) await payload?.delete({ collection: 'secoes-cardapio', id }).catch(() => {})
     if (payload) {
       await payload.destroy()
     }

@@ -21,7 +21,9 @@ A feature tem três partes:
 ## REGRAS DE NEGÓCIO
 
 - RN-P01: `/pimenta-em-mel` fica na navegação global e na home (NavCard).
-  Detalhes do produto ainda não fornecidos (ingredientes, conservação e
+  A home também tem o `<PedidoPimentaCta>`, logo abaixo do CTA do delivery e
+  no mesmo modelo: leva direto a `/pimenta-em-mel/pedido`, com link
+  secundário para a página do produto. Detalhes do produto ainda não fornecidos (ingredientes, conservação e
   validade) aparecem como `<Placeholder>`. Nada é inventado (Req 19).
 - RN-P02: os produtos ficam na collection `produtos-pimenta`, separada do
   cardápio. Cada produto tem um preço unitário (obrigatório). Pode ter também

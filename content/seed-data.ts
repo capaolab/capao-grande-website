@@ -205,6 +205,20 @@ export type SeedCardapio = {
   ordem: number
 }
 
+// Seções do cardápio (docs/features/secoes-cardapio.md): as 4 seções do
+// cardápio impresso, na ordem de exibição. `tipo` substitui o comportamento
+// que antes dependia do nome (Pizzas = preço pelo tamanho).
+export const SECOES_CARDAPIO: Array<{
+  nome: SeedCardapio['secao']
+  tipo: 'comum' | 'por-tamanho' | 'tamanhos'
+  ordem: number
+}> = [
+  { nome: 'Pizzas', tipo: 'por-tamanho', ordem: 1 },
+  { nome: 'Tamanhos', tipo: 'tamanhos', ordem: 2 },
+  { nome: 'Bebidas', tipo: 'comum', ordem: 3 },
+  { nome: 'Vinhos', tipo: 'comum', ordem: 4 },
+]
+
 export const CARDAPIO: SeedCardapio[] = [
   // Pizzas — preço variável por tamanho (null = sem preço próprio)
   { secao: 'Pizzas', nome: 'Pizza Integral do Capão', detalhe: 'molho da casa, cenoura ralada, mozzarella, molho verde', preco: null, ordem: 1 },

@@ -16,7 +16,7 @@ import {
   ROTULO_FORMA_PAGAMENTO,
   type FormaPagamento,
 } from './caixa'
-import { partesDaConta, type ContaCaixa } from './caixa-api'
+import { partesDaConta, ROTULO_STATUS_CONTA, type ContaCaixa } from './caixa-api'
 import type { PedidoResumo } from './pedidos-api'
 import { rotuloStatus } from './status-pedido'
 
@@ -32,7 +32,7 @@ export interface ResumoCaixaDia {
   /** Soma das partes pagas. */
   recebido: number
   porForma: Record<FormaPagamento, number>
-  /** Total ainda não pago (contas abertas). */
+  /** Total ainda não pago (contas fechadas e em pagamento). */
   emDebito: number
   /** total / contas (0 sem contas). */
   ticketMedio: number
@@ -142,7 +142,7 @@ export interface LinhaHistorico {
   emDebito: number
   /** Rótulo legível do status. */
   status: string
-  /** Valor bruto do status (`aberta`/`paga` ou status do pedido). */
+  /** Valor bruto do status (`fechada`/`pagamento`/`paga` ou status do pedido). */
   statusValor: string
   /** Pagamentos por pessoa, ex.: "Pix R$ 20,00 (pago); Cartão R$ 19,00". */
   pagamentos: string
@@ -207,7 +207,7 @@ export function montarLinhas(
       total,
       pago: resumo.pago,
       emDebito: resumo.emDebito,
-      status: conta.status === 'paga' ? 'Paga' : 'Aberta',
+      status: ROTULO_STATUS_CONTA[conta.status],
       statusValor: conta.status,
       pagamentos: partes
         .map(

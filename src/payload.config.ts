@@ -8,17 +8,18 @@ import { buildConfig } from 'payload'
 import { Caixa } from './collections/Caixa'
 import { Cardapio } from './collections/Cardapio'
 import { Cronologia } from './collections/Cronologia'
+import { Etiquetas } from './collections/Etiquetas'
 import { Informes } from './collections/Informes'
 import { Media } from './collections/Media'
 import { Pedidos } from './collections/Pedidos'
 import { PedidosPimenta } from './collections/PedidosPimenta'
 import { ProdutosPimenta } from './collections/ProdutosPimenta'
+import { SecoesCardapio } from './collections/SecoesCardapio'
 import { Users } from './collections/Users'
 import { cadastroCliente } from './endpoints/cadastro-cliente'
 import { submeterPedido } from './endpoints/submeter-pedido'
 import { submeterPedidoPimenta } from './endpoints/submeter-pedido-pimenta'
 import { Configuracoes } from './globals/Configuracoes'
-import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -72,16 +73,16 @@ export default buildConfig({
   // `pool` é obrigatório; a string vem de DATABASE_URI (Requisito 2.2).
   //
   // Schema: em desenvolvimento o Payload sincroniza o banco sozinho (`push`).
-  // Em produção/staging (NODE_ENV=production, imagem Docker) não há push: as
-  // migrations versionadas em src/migrations rodam na inicialização do
-  // servidor via `prodMigrations` — a imagem standalone não tem a CLI do
-  // Payload para rodar `payload migrate`. Toda mudança de schema precisa de
-  // `npm run payload migrate:create <nome>` antes da release (ver README).
+  // Em staging/produção (NODE_ENV=production) não há push e o app NÃO migra
+  // ao subir: as migrations versionadas em src/migrations rodam num passo
+  // explícito do deploy, com a imagem `<versão>-migrate` (estágio `migrate`
+  // do Dockerfile, `payload migrate`), antes de o app da nova versão subir.
+  // Toda mudança de schema precisa de `npm run payload migrate:create <nome>`
+  // antes da release (ver README).
   db: postgresAdapter({
     pool: {
       connectionString,
     },
-    prodMigrations: migrations,
   }),
   // Localização pt-BR (padrão) e en (secundária) (Requisitos 3.1, 3.2).
   // `fallback: true` faz campos localizados caírem no defaultLocale (pt)
@@ -97,7 +98,9 @@ export default buildConfig({
   // Users: coleção de autenticação do admin (Req 1.2).
   // Media: coleção de uploads no filesystem local (Req 4.1–4.4).
   // Informes: publicações/notícias (Req 5).
+  // Etiquetas: etiquetas dos informes (docs/features/etiquetas-informes.md).
   // Cardapio: itens do cardápio (Req 6).
+  // SecoesCardapio: seções do cardápio (docs/features/secoes-cardapio.md).
   // Cronologia: marcos da linha do tempo (Req 7).
   // Pedidos: pedidos de delivery (docs/features/delivery-pedidos.md, Tarefa 1).
   // ProdutosPimenta/PedidosPimenta: catálogo e pedidos de pimenta em mel
@@ -106,7 +109,9 @@ export default buildConfig({
     Users,
     Media,
     Informes,
+    Etiquetas,
     Cardapio,
+    SecoesCardapio,
     Cronologia,
     Pedidos,
     Caixa,

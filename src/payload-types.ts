@@ -70,7 +70,9 @@ export interface Config {
     users: User;
     media: Media;
     informes: Informe;
+    etiquetas: Etiqueta;
     cardapio: Cardapio;
+    'secoes-cardapio': SecoesCardapio;
     cronologia: Cronologia;
     pedidos: Pedido;
     caixa: Caixa;
@@ -86,7 +88,9 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     informes: InformesSelect<false> | InformesSelect<true>;
+    etiquetas: EtiquetasSelect<false> | EtiquetasSelect<true>;
     cardapio: CardapioSelect<false> | CardapioSelect<true>;
+    'secoes-cardapio': SecoesCardapioSelect<false> | SecoesCardapioSelect<true>;
     cronologia: CronologiaSelect<false> | CronologiaSelect<true>;
     pedidos: PedidosSelect<false> | PedidosSelect<true>;
     caixa: CaixaSelect<false> | CaixaSelect<true>;
@@ -213,7 +217,7 @@ export interface Informe {
    */
   slug?: string | null;
   data?: string | null;
-  etiqueta: 'Funcionamento' | 'Reflorestamento' | 'Horta' | 'Compostagem' | 'Apiário' | 'Viveiro' | 'Cardápio';
+  etiquetas: (number | Etiqueta)[];
   resumo?: string | null;
   corpo?: {
     root: {
@@ -235,6 +239,13 @@ export interface Informe {
    */
   capa?: (number | null) | Media;
   /**
+   * Use quando não houver imagem enviada acima. No Unsplash, clique com o botão direito na foto e escolha "Copiar endereço da imagem" (o link começa com https://images.unsplash.com/).
+   */
+  capaUnsplash?: {
+    url?: string | null;
+    alt?: string | null;
+  };
+  /**
    * No máximo um informe pode estar em destaque por vez.
    */
   destaque?: boolean | null;
@@ -244,11 +255,21 @@ export interface Informe {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "etiquetas".
+ */
+export interface Etiqueta {
+  id: number;
+  nome: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "cardapio".
  */
 export interface Cardapio {
   id: number;
-  secao: 'Pizzas' | 'Tamanhos' | 'Bebidas' | 'Vinhos';
+  secao: number | SecoesCardapio;
   nome: string;
   detalhe?: string | null;
   /**
@@ -257,6 +278,21 @@ export interface Cardapio {
   preco?: number | null;
   ordem?: number | null;
   ativo?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "secoes-cardapio".
+ */
+export interface SecoesCardapio {
+  id: number;
+  nome: string;
+  ordem?: number | null;
+  /**
+   * Use "Comum" para seções novas. "Tamanhos" define os preços dos itens das seções "Preço pelo tamanho".
+   */
+  tipo: 'comum' | 'por-tamanho' | 'tamanhos';
   updatedAt: string;
   createdAt: string;
 }
@@ -359,9 +395,9 @@ export interface Caixa {
       }[]
     | null;
   /**
-   * Derivado: "Paga" quando todas as partes estão pagas.
+   * "Fechada" aguarda o caixa; "Em pagamento" congela os valores; "Paga" quando todas as partes estão pagas.
    */
-  status: 'aberta' | 'paga';
+  status: 'fechada' | 'pagamento' | 'paga';
   funcionario?: (number | null) | User;
   observacoes?: string | null;
   updatedAt: string;
@@ -471,8 +507,16 @@ export interface PayloadLockedDocument {
         value: number | Informe;
       } | null)
     | ({
+        relationTo: 'etiquetas';
+        value: number | Etiqueta;
+      } | null)
+    | ({
         relationTo: 'cardapio';
         value: number | Cardapio;
+      } | null)
+    | ({
+        relationTo: 'secoes-cardapio';
+        value: number | SecoesCardapio;
       } | null)
     | ({
         relationTo: 'cronologia';
@@ -591,12 +635,27 @@ export interface InformesSelect<T extends boolean = true> {
   titulo?: T;
   slug?: T;
   data?: T;
-  etiqueta?: T;
+  etiquetas?: T;
   resumo?: T;
   corpo?: T;
   capa?: T;
+  capaUnsplash?:
+    | T
+    | {
+        url?: T;
+        alt?: T;
+      };
   destaque?: T;
   publicado?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "etiquetas_select".
+ */
+export interface EtiquetasSelect<T extends boolean = true> {
+  nome?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -611,6 +670,17 @@ export interface CardapioSelect<T extends boolean = true> {
   preco?: T;
   ordem?: T;
   ativo?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "secoes-cardapio_select".
+ */
+export interface SecoesCardapioSelect<T extends boolean = true> {
+  nome?: T;
+  ordem?: T;
+  tipo?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -13,14 +13,14 @@ function conta(parcial: Partial<ContaCaixa>): ContaCaixa {
     id: 1,
     codigo: 'AAAA',
     mesa: null,
-    itens: [{ nomeSnapshot: 'Pizza Margherita', quantidade: 1, precoUnitario: 50 }],
+    itens: [{ item: 1, nomeSnapshot: 'Pizza Margherita', quantidade: 1, precoUnitario: 50 }],
     subtotal: 50,
     servico: false,
     taxaServico: 0,
     desconto: 0,
     total: 50,
     pagamentos: [],
-    status: 'aberta',
+    status: 'pagamento',
     createdAt: '2026-09-25T20:00:00.000Z',
     ...parcial,
   }
@@ -92,6 +92,12 @@ describe('resumirDia', () => {
     const r = resumirDia([], [conta({ total: 50 })])
     expect(r.caixa.recebido).toBe(0)
     expect(r.caixa.emDebito).toBe(5000)
+  })
+
+  it('conta fechada (aguardando o caixa) conta como aberta e em débito (RN-CF08)', () => {
+    const r = resumirDia([], [conta({ status: 'fechada', total: 50 })])
+    expect(r.caixa).toMatchObject({ contas: 1, pagas: 0, abertas: 1, emDebito: 5000 })
+    expect(montarLinhas([], [conta({ status: 'fechada' })])[0].status).toBe('Fechada')
   })
 
   it('delivery entra com o subtotal e contagem por status; total geral soma os dois', () => {

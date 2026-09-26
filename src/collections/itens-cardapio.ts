@@ -40,13 +40,20 @@ export async function resolverItensCardapio(
     ...new Set(entradas.flatMap((e) => [e.item, e.tamanho]).filter((id) => id != null)),
   ] as (number | string)[]
 
-  const { docs: cardapio } = await req.payload.find({
+  // depth 1: o tipo da seção identifica os tamanhos (secoes-cardapio.md).
+  const { docs } = await req.payload.find({
     collection: 'cardapio',
     where: { id: { in: ids } },
     limit: 0,
-    depth: 0,
+    depth: 1,
     req,
   })
+  const cardapio = docs.map((doc) => ({
+    id: doc.id,
+    nome: doc.nome,
+    preco: doc.preco,
+    tipoSecao: typeof doc.secao === 'object' ? doc.secao.tipo : ('comum' as const),
+  }))
 
   const resultado = calcularSubtotal(entradas, cardapio)
 

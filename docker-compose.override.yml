@@ -7,6 +7,9 @@ services:
       target: dev
     environment:
       NODE_ENV: development
+      # Admin criado pelo `npm run seed` (só em desenvolvimento).
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
     volumes:
       - ./:/app
       - /app/node_modules

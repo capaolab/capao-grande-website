@@ -82,6 +82,7 @@ const runId = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`
 describe.skipIf(!dbAvailable)('hook de destaque único (Payload + Postgres)', () => {
   let payload: Payload
   const createdIds: (number | string)[] = []
+  let etiquetaId: number | undefined
 
   // Conta quantos informes, entre os criados por este teste, estão em destaque,
   // relendo o estado direto do banco (depth 0 para evitar joins desnecessários).
@@ -116,6 +117,7 @@ describe.skipIf(!dbAvailable)('hook de destaque único (Payload + Postgres)', ()
       }
     }
     // Encerra a instância do Payload (fecha o pool do Postgres).
+    if (etiquetaId) await payload?.delete({ collection: 'etiquetas', id: etiquetaId }).catch(() => {})
     if (payload) {
       await payload.destroy()
     }
@@ -124,12 +126,19 @@ describe.skipIf(!dbAvailable)('hook de destaque único (Payload + Postgres)', ()
   it(
     'payload.update marca um informe e desmarca os demais, mantendo no máx. um destaque (Req 5.5)',
     async () => {
+      // Informe exige ao menos uma etiqueta (etiquetas-informes.md). Criada
+      // aqui, e não no beforeAll, para já entrar em uso: o seed.integration
+      // roda em paralelo e apaga os cadastros sem uso.
+      etiquetaId = (
+        await payload.create({ collection: 'etiquetas', data: { nome: `Etiqueta ${runId}` } })
+      ).id
+
       // 1. Cria 3 informes; o primeiro já entra em destaque.
       const a = await payload.create({
         collection: 'informes',
         data: {
           titulo: `Informe A ${runId}`,
-          etiqueta: 'Funcionamento',
+          etiquetas: [etiquetaId],
           publicado: true,
           destaque: true,
         },
@@ -140,7 +149,7 @@ describe.skipIf(!dbAvailable)('hook de destaque único (Payload + Postgres)', ()
         collection: 'informes',
         data: {
           titulo: `Informe B ${runId}`,
-          etiqueta: 'Horta',
+          etiquetas: [etiquetaId],
           publicado: true,
           destaque: false,
         },
@@ -151,7 +160,7 @@ describe.skipIf(!dbAvailable)('hook de destaque único (Payload + Postgres)', ()
         collection: 'informes',
         data: {
           titulo: `Informe C ${runId}`,
-          etiqueta: 'Compostagem',
+          etiquetas: [etiquetaId],
           publicado: true,
           destaque: false,
         },

@@ -57,7 +57,7 @@ import { Placeholder } from '../components/Placeholder'
 import { NavCard } from '../components/NavCard'
 import { MenuSection } from '../components/MenuSection'
 import { Timeline } from '../components/Timeline'
-import type { Cardapio, Cronologia } from '../src/payload-types'
+import type { Cardapio, Cronologia, SecoesCardapio } from '../src/payload-types'
 
 afterEach(() => {
   cleanup()
@@ -68,10 +68,16 @@ afterEach(() => {
 // os snapshots estáveis entre execuções.
 // ---------------------------------------------------------------------------
 
+function secao(id: number, nome: string, tipo: SecoesCardapio['tipo']): SecoesCardapio {
+  return { id, nome, tipo, ordem: id, updatedAt: '2024-01-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' }
+}
+const BEBIDAS = secao(3, 'Bebidas', 'comum')
+const PIZZAS = secao(1, 'Pizzas', 'por-tamanho')
+
 const ITENS_CARDAPIO: Cardapio[] = [
   {
     id: 1,
-    secao: 'Bebidas',
+    secao: BEBIDAS,
     nome: 'Suco de laranja',
     // Detalhe preservado palavra por palavra (Req 14.4): "jarra 1,5 l".
     detalhe: 'jarra 1,5 l',
@@ -85,7 +91,7 @@ const ITENS_CARDAPIO: Cardapio[] = [
   },
   {
     id: 2,
-    secao: 'Bebidas',
+    secao: BEBIDAS,
     nome: 'Refrigerante',
     detalhe: null,
     preco: 8,
@@ -101,7 +107,7 @@ const ITENS_CARDAPIO: Cardapio[] = [
 const ITENS_PIZZAS: Cardapio[] = [
   {
     id: 3,
-    secao: 'Pizzas',
+    secao: PIZZAS,
     nome: 'Pizza Integral do Capão',
     detalhe: 'molho da casa',
     preco: null,
@@ -160,13 +166,13 @@ describe('Snapshots do sistema de design (Req 18.2, 18.3)', () => {
 
   it('<MenuSection> fixa filete oliva, divisores e preço formatado', () => {
     const { container } = render(
-      <MenuSection secao="Bebidas" itens={ITENS_CARDAPIO} />,
+      <MenuSection secao="Bebidas" tipo="comum" itens={ITENS_CARDAPIO} />,
     )
     expect(container.innerHTML).toMatchSnapshot()
   })
 
   it('<MenuSection> exibe "ver tamanhos" para pizza sem preço próprio', () => {
-    const { container } = render(<MenuSection secao="Pizzas" itens={ITENS_PIZZAS} />)
+    const { container } = render(<MenuSection secao="Pizzas" tipo="por-tamanho" itens={ITENS_PIZZAS} />)
     // Tarefa 6 de delivery-pedidos.md: preco null na seção Pizzas exibe o
     // texto do cardápio impresso, não o placeholder.
     expect(container.textContent).toContain('ver tamanhos')
@@ -221,7 +227,7 @@ describe('Contrato de tokens: paleta, raios, bordas e ausência de sombra (Req 1
 
   it('<MenuSection> usa o filete oliva/divisores da paleta e nenhuma sombra', () => {
     const { container } = render(
-      <MenuSection secao="Bebidas" itens={ITENS_CARDAPIO} />,
+      <MenuSection secao="Bebidas" tipo="comum" itens={ITENS_CARDAPIO} />,
     )
     // Req 18.2: filete oliva no título e divisores na borda clara da paleta.
     const heading = container.querySelector('h2')

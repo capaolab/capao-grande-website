@@ -8,7 +8,7 @@
 // de domínio: formato do código público, validação da submissão e cálculo do
 // subtotal a partir dos preços ATUAIS do cardápio (nunca do cliente).
 
-import type { Cardapio } from '@/src/payload-types'
+import type { TipoSecao } from './cardapio'
 
 // ---------------------------------------------------------------------------
 // Código público do pedido (RN04, P2)
@@ -44,14 +44,15 @@ export interface ItemPedidoEntrada {
   item: number | string
   /** Quantidade (inteiro >= 1). */
   quantidade: number
-  /** Id do tamanho (item da seção Tamanhos) — obrigatório quando o item não tem preço próprio (pizzas). */
+  /** Id do tamanho (item da seção de tamanhos) — obrigatório quando o item não tem preço próprio (pizzas). */
   tamanho?: number | string | null
 }
 
 /** Forma mínima de um item do cardápio aceita por `calcularSubtotal`. */
 export interface ItemCardapioMinimo {
   id: number | string
-  secao: Cardapio['secao']
+  /** Tipo da seção do item (secoes-cardapio.md): `tamanhos` marca os tamanhos. */
+  tipoSecao: TipoSecao
   nome?: string | null
   preco?: number | null
 }
@@ -87,7 +88,7 @@ export function descreverErroSubtotal(erro: ErroCalculoSubtotal): string {
     case 'pizza_sem_tamanho':
       return `O item ${erro.item} não tem preço próprio (pizza): informe o tamanho.`
     case 'tamanho_invalido':
-      return `Tamanho inválido (${erro.tamanho}) para o item ${erro.item}: deve ser um item da seção Tamanhos com preço definido.`
+      return `Tamanho inválido (${erro.tamanho}) para o item ${erro.item}: deve ser um item da seção de tamanhos com preço definido.`
   }
 }
 
@@ -97,7 +98,8 @@ export function descreverErroSubtotal(erro: ErroCalculoSubtotal): string {
  * Regras (Tarefa 1 de delivery-pedidos.md):
  * - Para cada item, o documento do cardápio é resolvido por id em `cardapio`.
  * - Se `item.preco` é null (pizza), o preço vem do `tamanho` referenciado,
- *   que precisa existir, pertencer à seção 'Tamanhos' e ter preço definido.
+ *   que precisa existir, pertencer à seção do tipo `tamanhos` e ter preço
+ *   definido.
  * - Quantidade deve ser inteiro >= 1.
  * - subtotal = Σ precoUnitario × quantidade (arredondado a 2 casas).
  *
@@ -138,7 +140,7 @@ export function calcularSubtotal(
         continue
       }
       const docTamanho = porId.get(String(entrada.tamanho))
-      if (!docTamanho || docTamanho.secao !== 'Tamanhos' || docTamanho.preco == null) {
+      if (!docTamanho || docTamanho.tipoSecao !== 'tamanhos' || docTamanho.preco == null) {
         erros.push({ tipo: 'tamanho_invalido', item: entrada.item, tamanho: entrada.tamanho })
         continue
       }

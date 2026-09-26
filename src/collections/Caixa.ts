@@ -15,22 +15,28 @@ import {
 import { gerarCodigoUnico } from './codigo-unico'
 import { resolverItensCardapio, type ItemDocumentoCardapio } from './itens-cardapio'
 
-// Colecao_Caixa (docs/features/caixa-historico.md): contas de mesa da
-// pizzaria, registradas pelo funcionário NO CAIXA — os itens são lançados de
-// uma vez quando a mesa vai pagar (RN-C01).
+// Colecao_Caixa (docs/features/caixa-historico.md e
+// docs/features/caixa-contas-fechadas.md): contas de mesa da pizzaria.
+//
+// Ciclo da conta (RN-CF01):
+// - `fechada`: itens lançados, aguardando o caixa. Itens editáveis e
+//   recalculados com o cardápio atual a cada gravação (RN-CF04); sem serviço,
+//   desconto nem rateio.
+// - `pagamento`: o caixa definiu serviço/desconto e seguiu para o pagamento.
+//   Itens e valores ficam congelados (RN-CF05) — uma mudança de preço no
+//   cardápio não pode mexer numa conta já rateada.
+// - `paga`: todas as partes pagas (derivado no servidor, RN-C07).
+// Não há volta para `fechada` (RN-CF06).
 //
 // Campos:
 // - `codigo`/`mesa`: referência da conta (código gerado; mesa opcional).
 // - `itens`: mesma forma de `pedidos` (item + quantidade + tamanho), com
 //   snapshots de nome/preço resolvidos no servidor.
 // - `subtotal`, `servico` (10% opcional), `taxaServico`, `desconto`,
-//   `total`: calculados no servidor na CRIAÇÃO e congelados depois (RN-C02) —
-//   uma mudança de preço no cardápio não pode mexer numa conta já rateada.
+//   `total`: calculados no servidor.
 // - `pagamentos`: rateio por pessoa — valor, forma (pix/dinheiro/cartão) e
 //   check de pago (RN-C04..C06). A soma das partes sempre fecha o total.
-// - `status`: `aberta` até todas as partes estarem pagas; `paga` é derivado
-//   no servidor (RN-C07).
-// - `funcionario`: quem registrou a conta (req.user na criação).
+// - `funcionario`: quem fechou a conta (req.user na criação).
 //
 // Valores monetários gravados em REAIS (como `pedidos.subtotal`); as contas
 // de rateio acontecem em centavos em lib/caixa.ts.
@@ -39,7 +45,8 @@ import { resolverItensCardapio, type ItemDocumentoCardapio } from './itens-carda
 // só admin remove.
 
 const STATUS_CONTA = [
-  { label: 'Aberta', value: 'aberta' },
+  { label: 'Fechada', value: 'fechada' },
+  { label: 'Em pagamento', value: 'pagamento' },
   { label: 'Paga', value: 'paga' },
 ] as const
 
@@ -62,6 +69,13 @@ function paraParte(linha: PagamentoDocumento): ParteRateio {
     pago: Boolean(linha.pago),
     editado: Boolean(linha.editado),
   }
+}
+
+/** Relações de `itens` como id (o documento original pode vir populado). */
+function semRelacaoPopulada(linha: ItemDocumentoCardapio): ItemDocumentoCardapio {
+  const id = (valor: unknown) =>
+    typeof valor === 'object' && valor !== null ? (valor as { id: unknown }).id : valor
+  return { ...linha, item: id(linha.item), tamanho: id(linha.tamanho) }
 }
 
 export const Caixa: CollectionConfig = {
@@ -200,16 +214,20 @@ export const Caixa: CollectionConfig = {
       name: 'status',
       type: 'select',
       required: true,
-      defaultValue: 'aberta',
+      defaultValue: 'fechada',
       options: [...STATUS_CONTA],
       label: 'Status',
-      admin: { readOnly: true, description: 'Derivado: "Paga" quando todas as partes estão pagas.' },
+      admin: {
+        readOnly: true,
+        description:
+          '"Fechada" aguarda o caixa; "Em pagamento" congela os valores; "Paga" quando todas as partes estão pagas.',
+      },
     },
     {
       name: 'funcionario',
       type: 'relationship',
       relationTo: 'users',
-      label: 'Registrado por',
+      label: 'Fechada por',
       admin: { readOnly: true },
     },
     {
@@ -221,32 +239,54 @@ export const Caixa: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, req, operation, originalDoc }) => {
+        const anterior = operation === 'create' ? null : (originalDoc?.status as string | undefined)
+        const pedido = data.status as string | undefined
+
         if (operation === 'create') {
           if (!data.codigo) data.codigo = await gerarCodigoUnico(req, 'caixa')
           if (req.user) data.funcionario = req.user.id
+        } else if (anterior && anterior !== 'fechada' && pedido === 'fechada') {
+          throw new APIError('Conta em pagamento não pode voltar a ser fechada.', 400, null, true)
+        }
 
+        if (!anterior || anterior === 'fechada') {
           // Itens e total: calculados no servidor a partir do cardápio atual
-          // (nunca do cliente), só na criação (RN-C02).
+          // (nunca do cliente) enquanto a conta está fechada (RN-CF04).
           const resolvido = await resolverItensCardapio(
-            (data.itens ?? []) as ItemDocumentoCardapio[],
+            ((data.itens ?? originalDoc?.itens ?? []) as ItemDocumentoCardapio[]).map(
+              semRelacaoPopulada,
+            ),
             req,
             'Conta',
           )
+          // Serviço e desconto são definidos pelo caixa ao seguir para o
+          // pagamento (RN-CF05); antes disso, a conta vale o subtotal.
+          const seguindo = pedido === 'pagamento'
           const conta = calcularTotalConta({
             subtotal: paraCentavos(resolvido.subtotal),
-            servico: Boolean(data.servico),
-            desconto: paraCentavos(Number(data.desconto ?? 0)),
+            servico: seguindo && Boolean(data.servico),
+            desconto: seguindo ? paraCentavos(Number(data.desconto ?? 0)) : 0,
           })
           if (!conta.ok) throw new APIError(conta.erro, 400, null, true)
 
           data.itens = resolvido.itens
           data.subtotal = paraReais(conta.subtotal)
+          data.servico = seguindo && Boolean(data.servico)
           data.taxaServico = paraReais(conta.taxaServico)
           data.desconto = paraReais(conta.desconto)
           data.total = paraReais(conta.total)
+
+          if (!seguindo) {
+            if (((data.pagamentos ?? []) as PagamentoDocumento[]).length > 0) {
+              throw new APIError('Siga para o pagamento antes de dividir a conta.', 400, null, true)
+            }
+            data.pagamentos = []
+            data.status = 'fechada'
+            return data
+          }
         } else if (originalDoc) {
-          // Conta já fechada: itens e valores congelados (RN-C02). Só o
-          // rateio, a mesa e as observações mudam depois da criação.
+          // Conta em pagamento: itens e valores congelados (RN-CF05). Só o
+          // rateio, a mesa e as observações mudam daqui em diante.
           for (const campo of [
             'codigo',
             'itens',
@@ -283,7 +323,7 @@ export const Caixa: CollectionConfig = {
           return { ...linha, pagoEm }
         })
 
-        data.status = resumoPagamento(total, partes).quitada ? 'paga' : 'aberta'
+        data.status = resumoPagamento(total, partes).quitada ? 'paga' : 'pagamento'
 
         return data
       },

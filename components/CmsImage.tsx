@@ -30,7 +30,13 @@ import type { Media } from '@/src/payload-types'
  * do Payload: pode ser um id (número), um documento `Media` populado, ou
  * ausente (`null`/`undefined`).
  */
-export type CmsImageValue = number | Media | null | undefined
+export type CmsImageValue = number | ImagemCms | null | undefined
+
+/**
+ * O que o componente lê de uma imagem: um documento `Media` ou uma imagem
+ * externa com a mesma forma (capa do Unsplash, lib/unsplash.ts).
+ */
+export type ImagemCms = Pick<Media, 'url' | 'alt' | 'width' | 'height'>
 
 export interface CmsImageProps {
   /** O valor do campo de mídia (id, documento populado ou ausente). */
@@ -63,7 +69,7 @@ export interface CmsImageProps {
 }
 
 /** `true` quando o valor é um documento Media populado com `url` utilizável. */
-function isPopulatedMedia(media: CmsImageValue): media is Media & { url: string } {
+function isPopulatedMedia(media: CmsImageValue): media is ImagemCms & { url: string } {
   return (
     typeof media === 'object' &&
     media !== null &&
