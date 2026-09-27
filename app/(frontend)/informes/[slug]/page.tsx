@@ -42,19 +42,24 @@ interface InformeDetalhePageProps {
 }
 
 /**
- * Gera os parâmetros estáticos para o export de preview (Vercel,
+ * Gera os parâmetros estáticos SÓ para o export de preview (Vercel,
  * `CONTENT_SOURCE=static` — ver next.config.ts e
- * .github/workflows/deploy-preview.yml). `output: 'export'` exige que TODO
- * segmento dinâmico seja conhecido em build time; fora do modo estático
- * devolve `[]`, preservando o comportamento atual (SSR sob demanda via
- * `dynamicParams: true` implícito, quando há Payload/Postgres disponível).
+ * .github/workflows/deploy-preview.yml): `output: 'export'` exige que todo
+ * segmento dinâmico seja conhecido em build time.
+ *
+ * Na aplicação completa o export é `undefined`, e a rota é dinâmica (SSR a
+ * cada requisição, como as demais páginas do CMS). Devolver `[]` NÃO serve:
+ * o Next trataria a rota como estática gerada na primeira visita (ISR), e o
+ * `connection()` de lib/payload.ts derrubaria a página com erro 500
+ * (DYNAMIC_SERVER_USAGE). O Next só usa o export quando é uma função.
  */
-export async function generateStaticParams(): Promise<{ slug: string }[]> {
-  if (process.env.CONTENT_SOURCE !== 'static') return []
-
-  const { getInformesSlugsEstaticos } = await import('@/content/static-content')
-  return getInformesSlugsEstaticos().map((slug) => ({ slug }))
-}
+export const generateStaticParams =
+  process.env.CONTENT_SOURCE === 'static'
+    ? async (): Promise<{ slug: string }[]> => {
+        const { getInformesSlugsEstaticos } = await import('@/content/static-content')
+        return getInformesSlugsEstaticos().map((slug) => ({ slug }))
+      }
+    : undefined
 
 /**
  * Metadados da página: define o <title> a partir do título do informe. Também
@@ -122,8 +127,10 @@ export default async function InformeDetalhePage({
         {informe.titulo}
       </h1>
 
-      {/* Capa 1:1 (Req 5.3, 12.1); placeholder listrado quando ausente. */}
-      <div className="mt-8">
+      {/* Capa 1:1 (Req 5.3, 12.1); placeholder listrado quando ausente.
+          Largura limitada a 50vh: sendo quadrada, a capa ocupa no máximo
+          meia tela e o início do texto fica visível. */}
+      <div className="mx-auto mt-8 w-full max-w-[50vh]">
         <CmsImage
           media={capaDoInforme(informe)}
           square

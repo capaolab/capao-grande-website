@@ -16,6 +16,10 @@
 //  - Rodapé fixo com o subtotal ao vivo (`calcularSubtotalPimenta`) e aviso
 //    de que o frete é combinado no WhatsApp.
 //
+// Modo funcionário (docs/features/pedidos-painel.md): como no <PedidoForm> —
+// bloco <BuscaCliente> acima do pedido, sem pré-preenchimento com a conta
+// logada e confirmação voltada à equipe.
+//
 // Submissão: POST /api/submeter-pedido-pimenta. 401 → link para entrar de
 // novo; 400/429/rede → erros sem perder o formulário; 201 → confirmação com
 // o código, botão do WhatsApp e atalho para "Meus pedidos".
@@ -24,8 +28,9 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 
 import Link from 'next/link'
 
 import { buscarUsuarioAtual } from '@/lib/auth-client'
+import { validarClienteBalcao } from '@/lib/cadastro'
 import { renderPreco } from '@/lib/cardapio'
-import { comRetorno, ROTA_CLIENTE, ROTA_LOGIN } from '@/lib/permissoes'
+import { comRetorno, ROTA_CLIENTE, ROTA_FUNCIONARIO, ROTA_LOGIN } from '@/lib/permissoes'
 import {
   calcularSubtotalPimenta,
   precoAplicavel,
@@ -34,6 +39,13 @@ import {
 } from '@/lib/pimenta'
 import type { ModalidadeEntrega } from '@/lib/status-pedido'
 import { normalizarTelefone } from '@/lib/telefone'
+import {
+  BuscaCliente,
+  CLIENTE_BALCAO_VAZIO,
+  paraCorpoCliente,
+  pontoDoCliente,
+  type ClienteBalcao,
+} from './BuscaCliente'
 import { PedidoMapa, type PontoEntrega } from './PedidoMapa'
 
 const ROTA_FORMULARIO = '/pimenta-em-mel/pedido'
@@ -50,6 +62,8 @@ export interface PedidoPimentaFormProps {
   produtos: ProdutoPimentaForm[]
   /** Dígitos do WhatsApp da pizzaria; null = omitir botão. */
   whatsappDigitos: string | null
+  /** 'funcionario' = pedido registrado pela equipe para um cliente. */
+  modo?: 'cliente' | 'funcionario'
 }
 
 interface ErrosCampos {
@@ -75,7 +89,11 @@ function lerQuantidade(texto: string | undefined): number {
 export function PedidoPimentaForm({
   produtos,
   whatsappDigitos,
+  modo = 'cliente',
 }: PedidoPimentaFormProps): ReactElement {
+  const equipe = modo === 'funcionario'
+  const [cliente, setCliente] = useState<ClienteBalcao>(CLIENTE_BALCAO_VAZIO)
+  const [errosCliente, setErrosCliente] = useState<string[]>([])
   // Quantidade digitada por produto (texto, para permitir edição livre).
   const [quantidades, setQuantidades] = useState<Record<number, string>>({})
   const [nome, setNome] = useState('')
@@ -98,6 +116,7 @@ export function PedidoPimentaForm({
 
   // Pré-preenchimento com os dados da conta, sem sobrescrever o digitado.
   useEffect(() => {
+    if (equipe) return
     let ativo = true
     buscarUsuarioAtual().then((usuario) => {
       if (!ativo || !usuario) return
@@ -115,7 +134,7 @@ export function PedidoPimentaForm({
     return () => {
       ativo = false
     }
-  }, [])
+  }, [equipe])
 
   const itens = useMemo(
     () =>
@@ -142,8 +161,8 @@ export function PedidoPimentaForm({
 
   function validar(): ErrosCampos {
     const erros: ErrosCampos = {}
-    if (nome.trim() === '') erros.nome = 'Informe seu nome.'
-    if (telefone.trim() === '') erros.telefone = 'Informe seu telefone (WhatsApp).'
+    if (!equipe && nome.trim() === '') erros.nome = 'Informe seu nome.'
+    if (!equipe && telefone.trim() === '') erros.telefone = 'Informe seu telefone (WhatsApp).'
     if (itens.length === 0) erros.itens = 'Informe a quantidade de ao menos um produto.'
     if (modalidade === 'entrega' && ponto == null) {
       erros.localizacao = 'Marque o ponto de entrega no mapa (ou escolha retirada).'
@@ -158,7 +177,9 @@ export function PedidoPimentaForm({
 
     const erros = validar()
     setErrosCampos(erros)
-    if (Object.keys(erros).length > 0) return
+    const errosDoCliente = equipe && cliente.id == null ? validarClienteBalcao(cliente) : []
+    setErrosCliente(errosDoCliente)
+    if (Object.keys(erros).length > 0 || errosDoCliente.length > 0) return
 
     setEnviando(true)
     try {
@@ -166,8 +187,9 @@ export function PedidoPimentaForm({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nome: nome.trim(),
-          telefone: telefone.trim(),
+          ...(equipe
+            ? { cliente: paraCorpoCliente(cliente) }
+            : { nome: nome.trim(), telefone: telefone.trim() }),
           ...(estabelecimento.trim() !== '' ? { estabelecimento: estabelecimento.trim() } : {}),
           itens,
           modalidade,
@@ -211,6 +233,45 @@ export function PedidoPimentaForm({
   }
 
   // ── Confirmação ───────────────────────────────────────────────────────────
+  if (confirmacao && equipe) {
+    return (
+      <section
+        aria-labelledby="pimenta-confirmacao-titulo"
+        className="borda-sistema flex flex-col gap-4 rounded-[var(--radius)] bg-[color:var(--color-papel)] p-6"
+      >
+        <h2
+          id="pimenta-confirmacao-titulo"
+          className="font-serif text-2xl text-[color:var(--color-marrom)]"
+        >
+          Pedido registrado
+        </h2>
+        <p className="font-serif text-4xl tracking-wide text-[color:var(--color-verde)]">
+          #{confirmacao.codigo}
+        </p>
+        <p className="font-sans text-[color:var(--color-paragrafo)]">
+          Valor dos produtos:{' '}
+          <strong className="text-[color:var(--color-marrom)]">
+            {renderPreco(confirmacao.subtotal)}
+          </strong>
+          . Informe o código ao cliente na conversa e valide o pedido na lista de pedidos
+          {modalidade === 'entrega' ? ', com o frete.' : '.'}
+        </p>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <Link href={`${ROTA_FUNCIONARIO}/pimenta`} className="btn-primario w-fit">
+            Ver pedidos
+          </Link>
+          {/* Navegação completa: recomeça o formulário do zero. */}
+          <a
+            href={`${ROTA_FUNCIONARIO}/pimenta/novo`}
+            className="hover-verde w-fit self-center font-sans text-[color:var(--color-marrom)] underline transition-colors"
+          >
+            Registrar outro pedido
+          </a>
+        </div>
+      </section>
+    )
+  }
+
   if (confirmacao) {
     return (
       <section
@@ -257,12 +318,12 @@ export function PedidoPimentaForm({
         ) : null}
         <div className="mt-2 flex flex-col gap-2 border-t border-[color:var(--color-borda)] pt-4">
           <p className="font-sans text-[color:var(--color-paragrafo)]">
-            Acompanhe o status em &ldquo;Meus pedidos&rdquo;.
+            Acompanhe o status em &ldquo;Pimenta em mel&rdquo;.
           </p>
           {telefoneConta && normalizarTelefone(telefone) !== telefoneConta ? (
             <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
               Este pedido usou um telefone diferente do cadastrado na sua conta, então não
-              aparecerá em &ldquo;Meus pedidos&rdquo;.
+              aparecerá em &ldquo;Pimenta em mel&rdquo;.
             </p>
           ) : null}
           <Link
@@ -300,6 +361,20 @@ export function PedidoPimentaForm({
             </a>
           ) : null}
         </div>
+      ) : null}
+
+      {/* Cliente do pedido (só na visão da equipe) -------------------------- */}
+      {equipe ? (
+        <BuscaCliente
+          valor={cliente}
+          onChange={setCliente}
+          onSelecionar={(encontrado) => {
+            setPontoConta(pontoDoCliente(encontrado))
+            if (encontrado.localidade) setLocalidade(encontrado.localidade)
+          }}
+          erros={errosCliente}
+          idPrefixo="pimenta"
+        />
       ) : null}
 
       {/* Produtos e quantidades ---------------------------------------------- */}
@@ -393,55 +468,59 @@ export function PedidoPimentaForm({
       {/* Dados do cliente ------------------------------------------------------ */}
       <section aria-labelledby="pimenta-dados-titulo" className="flex flex-col gap-4">
         <h2 id="pimenta-dados-titulo" className={CLASSE_H2}>
-          Seus dados
+          {equipe ? 'Estabelecimento e observações' : 'Seus dados'}
         </h2>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="pimenta-nome" className="font-sans text-[color:var(--color-marrom)]">
-            Nome (obrigatório)
-          </label>
-          <input
-            id="pimenta-nome"
-            name="nome"
-            type="text"
-            required
-            autoComplete="name"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            aria-invalid={errosCampos.nome ? true : undefined}
-            aria-describedby={errosCampos.nome ? 'pimenta-erro-nome' : undefined}
-            className={CLASSE_INPUT}
-          />
-          {errosCampos.nome ? (
-            <p id="pimenta-erro-nome" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
-              {errosCampos.nome}
-            </p>
-          ) : null}
-        </div>
+        {equipe ? null : (
+          <>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="pimenta-nome" className="font-sans text-[color:var(--color-marrom)]">
+                Nome (obrigatório)
+              </label>
+              <input
+                id="pimenta-nome"
+                name="nome"
+                type="text"
+                required
+                autoComplete="name"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                aria-invalid={errosCampos.nome ? true : undefined}
+                aria-describedby={errosCampos.nome ? 'pimenta-erro-nome' : undefined}
+                className={CLASSE_INPUT}
+              />
+              {errosCampos.nome ? (
+                <p id="pimenta-erro-nome" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
+                  {errosCampos.nome}
+                </p>
+              ) : null}
+            </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="pimenta-telefone" className="font-sans text-[color:var(--color-marrom)]">
-            Telefone (WhatsApp) (obrigatório)
-          </label>
-          <input
-            id="pimenta-telefone"
-            name="telefone"
-            type="tel"
-            required
-            inputMode="tel"
-            autoComplete="tel"
-            value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
-            aria-invalid={errosCampos.telefone ? true : undefined}
-            aria-describedby={errosCampos.telefone ? 'pimenta-erro-telefone' : undefined}
-            className={CLASSE_INPUT}
-          />
-          {errosCampos.telefone ? (
-            <p id="pimenta-erro-telefone" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
-              {errosCampos.telefone}
-            </p>
-          ) : null}
-        </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="pimenta-telefone" className="font-sans text-[color:var(--color-marrom)]">
+                Telefone (WhatsApp) (obrigatório)
+              </label>
+              <input
+                id="pimenta-telefone"
+                name="telefone"
+                type="tel"
+                required
+                inputMode="tel"
+                autoComplete="tel"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                aria-invalid={errosCampos.telefone ? true : undefined}
+                aria-describedby={errosCampos.telefone ? 'pimenta-erro-telefone' : undefined}
+                className={CLASSE_INPUT}
+              />
+              {errosCampos.telefone ? (
+                <p id="pimenta-erro-telefone" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
+                  {errosCampos.telefone}
+                </p>
+              ) : null}
+            </div>
+          </>
+        )}
 
         <div className="flex flex-col gap-1">
           <label htmlFor="pimenta-estabelecimento" className="font-sans text-[color:var(--color-marrom)]">

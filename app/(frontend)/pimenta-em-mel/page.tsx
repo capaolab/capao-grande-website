@@ -54,7 +54,7 @@ const PASSOS: Step[] = [
   {
     titulo: 'Envie o código no WhatsApp',
     descricao:
-      'Você recebe um código do pedido para informar na conversa, onde combinamos pagamento e frete. O status fica visível em "Meus pedidos".',
+      'Você recebe um código do pedido para informar na conversa, onde combinamos pagamento e frete. O status fica visível no seu painel, na aba "Pimenta em mel".',
   },
 ]
 

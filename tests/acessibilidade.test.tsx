@@ -99,12 +99,14 @@ vi.mock('next/link', () => ({
 // `notFound()` que lança um erro identificável (a página de detalhe usa isso).
 vi.mock('next/navigation', () => ({
   usePathname: () => '/',
+  // <RedirecionarPedido> (páginas públicas de pedido) só redireciona.
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND')
   },
 }))
 
-// <AreaInternaGuard> → pass-through: simula usuário LOGADO em `/pedido`
+// <AreaInternaGuard> → pass-through: simula usuário LOGADO no painel
 // (login obrigatório, RN12), para que o axe audite o formulário real e não o
 // estado "Verificando acesso…". O redirect sem sessão é coberto em
 // tests/area-interna-guard.test.tsx.
@@ -288,7 +290,10 @@ vi.mock('@/lib/queries', () => ({
       ? null
       : { informe: DESTAQUE, resumoEn: 'A summary in English.' },
   ),
+  // Filtro por etiqueta de /informes: exercita os links com aria-current.
+  getEtiquetas: vi.fn(async () => DESTAQUE.etiquetas),
   getCardapioAgrupado: vi.fn(async () => CARDAPIO),
+  getCardapioDelivery: vi.fn(async () => CARDAPIO),
   getCronologia: vi.fn(async () => CRONOLOGIA),
   getConfiguracoes: vi.fn(async () => CONFIGURACOES),
   getProdutosPimenta: vi.fn(async () => PRODUTOS_PIMENTA),
@@ -305,6 +310,8 @@ import DeliveryPage from '../app/(frontend)/delivery/page'
 import PedidoPage from '../app/(frontend)/pedido/page'
 import PimentaEmMelPage from '../app/(frontend)/pimenta-em-mel/page'
 import PedidoPimentaPage from '../app/(frontend)/pimenta-em-mel/pedido/page'
+import { PaginaPedidoDelivery } from '../components/PaginaPedidoDelivery'
+import { PaginaPedidoPimenta } from '../components/PaginaPedidoPimenta'
 import ProcessoPage from '../app/(frontend)/processo/page'
 import SobrePage from '../app/(frontend)/sobre/page'
 import NotFound from '../app/(frontend)/not-found'
@@ -376,14 +383,34 @@ describe('Acessibilidade (axe) das páginas públicas — Req 20.1, 20.2, 20.4',
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
   })
 
-  // A página `/pedido` renderiza o formulário (CONTENT_SOURCE não é 'static'
-  // nos testes). O <PedidoMapa> inicializa o Leaflet de forma assíncrona e
-  // protegida (try/catch), degradando sem quebrar a renderização em jsdom.
-  it('`/pedido` (formulário de delivery) não tem violações de axe', async () => {
+  // `/pedido` só redireciona para o formulário no painel
+  // (pedidos-painel.md).
+  it('`/pedido` (redirecionamento) não tem violações de axe', async () => {
     const ui = await PedidoPage()
     const { container } = renderPagina(ui)
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
   })
+
+  // Formulários no painel, nas visões do cliente e da equipe. O <PedidoMapa>
+  // inicializa o Leaflet de forma assíncrona e protegida (try/catch),
+  // degradando sem quebrar a renderização em jsdom.
+  it.each(['cliente', 'funcionario'] as const)(
+    'formulário de delivery (%s) não tem violações de axe',
+    async (modo) => {
+      const ui = await PaginaPedidoDelivery({ modo })
+      const { container } = renderPagina(ui)
+      expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
+    },
+  )
+
+  it.each(['cliente', 'funcionario'] as const)(
+    'formulário de pimenta em mel (%s) não tem violações de axe',
+    async (modo) => {
+      const ui = await PaginaPedidoPimenta({ modo })
+      const { container } = renderPagina(ui)
+      expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
+    },
+  )
 
   it('`/pimenta-em-mel` (página do produto) não tem violações de axe', async () => {
     const ui = await PimentaEmMelPage()
@@ -391,7 +418,7 @@ describe('Acessibilidade (axe) das páginas públicas — Req 20.1, 20.2, 20.4',
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
   })
 
-  it('`/pimenta-em-mel/pedido` (formulário) não tem violações de axe', async () => {
+  it('`/pimenta-em-mel/pedido` (redirecionamento) não tem violações de axe', async () => {
     const ui = await PedidoPimentaPage()
     const { container } = renderPagina(ui)
     expect(await axe(container, AXE_OPTIONS)).toHaveNoViolations()
@@ -461,7 +488,7 @@ describe('Nomes acessíveis dos controles de paginação — Req 20.4', () => {
 
     const recentes = getByRole('link', { name: 'Publicações mais recentes' })
     expect(recentes).toBeTruthy()
-    expect(recentes.getAttribute('href')).toBe('/informes?page=1')
+    expect(recentes.getAttribute('href')).toBe('/informes')
   })
 })
 
@@ -504,6 +531,8 @@ describe('Hierarquia de cabeçalhos: um único <h1> por página — Req 20.2', (
     ['cardapio', () => CardapioPage()],
     ['delivery', () => DeliveryPage()],
     ['pedido', () => PedidoPage()],
+    ['formulário de delivery', () => PaginaPedidoDelivery({ modo: 'cliente' })],
+    ['formulário de delivery (equipe)', () => PaginaPedidoDelivery({ modo: 'funcionario' })],
     ['processo', () => ProcessoPage()],
     ['sobre', () => SobrePage()],
     ['not-found', () => NotFound()],

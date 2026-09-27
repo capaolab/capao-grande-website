@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { MIN_SENHA, normalizarCadastro, validarCadastro } from '../lib/cadastro'
+import {
+  emailInternoCliente,
+  MIN_SENHA,
+  normalizarCadastro,
+  validarCadastro,
+  validarClienteBalcao,
+} from '../lib/cadastro'
 
 // Testes das funções puras de validação do cadastro público de clientes
 // (docs/features/dashboard-pedidos.md): mesmas regras aplicadas no endpoint
@@ -89,5 +95,35 @@ describe('normalizarCadastro', () => {
     expect(normalizarCadastro({ ...VALIDO, senha: ' senha com espacos ' }).senha).toBe(
       ' senha com espacos ',
     )
+  })
+})
+
+describe('validarClienteBalcao (pedidos-painel.md)', () => {
+  const CLIENTE = { nome: 'João', sobrenome: 'Souza', telefone: '(75) 98888-1111' }
+
+  it('aceita cliente sem e-mail nem senha', () => {
+    expect(validarClienteBalcao(CLIENTE)).toEqual([])
+    expect(validarClienteBalcao({ ...CLIENTE, email: '  ' })).toEqual([])
+  })
+
+  it('valida o e-mail quando informado', () => {
+    expect(validarClienteBalcao({ ...CLIENTE, email: 'joao@example.com' })).toEqual([])
+    expect(validarClienteBalcao({ ...CLIENTE, email: 'nao-eh-email' })).toContain(
+      'Informe um e-mail válido.',
+    )
+  })
+
+  it('exige nome, sobrenome e telefone plausível', () => {
+    expect(validarClienteBalcao({ ...CLIENTE, nome: '' })).toContain('Nome é obrigatório.')
+    expect(validarClienteBalcao({ ...CLIENTE, sobrenome: '' })).toContain(
+      'Sobrenome é obrigatório.',
+    )
+    expect(validarClienteBalcao({ ...CLIENTE, telefone: '123' })).toContain(
+      'Informe um telefone (WhatsApp) válido, com DDD.',
+    )
+  })
+
+  it('e-mail interno usa o telefone normalizado', () => {
+    expect(emailInternoCliente('(75) 98888-1111')).toBe('75988881111@cliente.capaogrande.local')
   })
 })

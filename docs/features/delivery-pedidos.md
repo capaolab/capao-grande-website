@@ -5,6 +5,11 @@
 > entregues. Critérios de aceite marcados abaixo. Pendente: validação com
 > Postgres real (testes de integração rodam apenas com o banco de pé) e
 > deploy/seed do ambiente completo.
+>
+> **Revisada por `docs/features/pedidos-painel.md`:** o formulário foi para o
+> painel (`/pedido` só redireciona), o delivery oferece só os itens do global
+> `cardapio-delivery`, e o frete é informado no card do pedido, que passa pelo
+> status `validado` antes de `pago` (o cliente vê o total a partir daí).
 
 ## CONTEXTO
 

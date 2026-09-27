@@ -4,13 +4,15 @@
 // em tests/status-pedido.test.ts.
 //
 // O valor do campo `status` da collection `pedidos`
-// (src/collections/Pedidos.ts) é o interno (pendente/pago/em_transito/
-// finalizado). Para o CLIENTE, exibimos rótulos amigáveis (RN-D02: o status
+// (src/collections/Pedidos.ts) é o interno (pendente/validado/pago/
+// em_transito/finalizado). `validado` (docs/features/pedidos-painel.md) é o
+// passo em que o funcionário informa o frete: a partir dele o cliente vê o
+// total do pedido. Para o CLIENTE, exibimos rótulos amigáveis (RN-D02: o status
 // deixou de ser interno — revogação da RN09 de delivery-pedidos.md). Para o
 // FUNCIONÁRIO, `proximoStatus` descreve a transição manual linear do funil.
 
 /** Valores canônicos do campo `status` (espelham as options da collection). */
-export const STATUS_PEDIDO = ['pendente', 'pago', 'em_transito', 'finalizado'] as const
+export const STATUS_PEDIDO = ['pendente', 'validado', 'pago', 'em_transito', 'finalizado'] as const
 
 export type StatusPedido = (typeof STATUS_PEDIDO)[number]
 
@@ -23,6 +25,7 @@ export type ModalidadeEntrega = 'entrega' | 'retirada'
 /** Rótulos operacionais (visão do funcionário/admin). */
 export const ROTULO_STATUS: Record<StatusPedido, string> = {
   pendente: 'Pendente',
+  validado: 'Validado',
   pago: 'Pago',
   em_transito: 'Em trânsito',
   finalizado: 'Finalizado',
@@ -31,6 +34,7 @@ export const ROTULO_STATUS: Record<StatusPedido, string> = {
 /** Rótulos amigáveis para o cliente acompanhar o próprio pedido (RN-D02). */
 export const ROTULO_STATUS_CLIENTE: Record<StatusPedido, string> = {
   pendente: 'Recebido',
+  validado: 'Pedido confirmado',
   pago: 'Pagamento confirmado',
   em_transito: 'Saiu para entrega',
   finalizado: 'Entregue',
@@ -80,7 +84,8 @@ export function rotuloStatusCliente(
 }
 
 /**
- * Próximo status do funil linear pendente → pago → em_transito → finalizado,
+ * Próximo status do funil linear pendente → validado → pago → em_transito →
+ * finalizado,
  * com o rótulo da AÇÃO para o botão do funcionário (ex.: "Marcar como pago").
  * `finalizado` não tem próximo — retorna null (pedido encerrado, sem ação).
  * Em `retirada` (pimenta em mel), `em_transito` significa "pronto para
@@ -92,6 +97,8 @@ export function proximoStatus(
 ): { status: StatusPedido; rotuloAcao: string } | null {
   switch (status) {
     case 'pendente':
+      return { status: 'validado', rotuloAcao: 'Validar pedido' }
+    case 'validado':
       return { status: 'pago', rotuloAcao: 'Marcar como pago' }
     case 'pago':
       return {
@@ -103,4 +110,17 @@ export function proximoStatus(
     case 'finalizado':
       return null
   }
+}
+
+/**
+ * O pedido precisa de frete para ser validado (pedidos-painel.md): delivery
+ * sempre; pimenta em mel só na entrega (retirada valida com frete 0).
+ */
+export function exigeFrete(modalidade: ModalidadeEntrega = 'entrega'): boolean {
+  return modalidade === 'entrega'
+}
+
+/** Total do pedido (produtos + frete), somado em centavos. */
+export function totalPedido(subtotal: number, frete: number): number {
+  return (Math.round(subtotal * 100) + Math.round(frete * 100)) / 100
 }

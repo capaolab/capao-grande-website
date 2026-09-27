@@ -4,6 +4,11 @@
 > dashboards `/area-cliente` e `/area-funcionario`, vínculo pedido ↔ conta por
 > telefone e access por papel na collection `pedidos` entregues. Revoga a RN09
 > de `delivery-pedidos.md` (status deixa de ser interno).
+>
+> **Revisada por `docs/features/pedidos-painel.md`:** "Meus pedidos" virou
+> "Delivery" (com aside dos produtos do delivery), o funil ganhou `validado`
+> (com frete) entre `pendente` e `pago`, e a equipe registra pedidos pelo
+> painel.
 
 ## CONTEXTO
 

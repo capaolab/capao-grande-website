@@ -3,6 +3,7 @@ import * as migration_20260926_113113_etiquetas from './20260926_113113_etiqueta
 import * as migration_20260926_113524_capa_unsplash from './20260926_113524_capa_unsplash';
 import * as migration_20260926_113948_secoes_cardapio from './20260926_113948_secoes_cardapio';
 import * as migration_20260926_114349_caixa_contas_fechadas from './20260926_114349_caixa_contas_fechadas';
+import * as migration_20260927_125035_pedidos_painel_frete from './20260927_125035_pedidos_painel_frete';
 
 export const migrations = [
   {
@@ -28,6 +29,11 @@ export const migrations = [
   {
     up: migration_20260926_114349_caixa_contas_fechadas.up,
     down: migration_20260926_114349_caixa_contas_fechadas.down,
-    name: '20260926_114349_caixa_contas_fechadas'
+    name: '20260926_114349_caixa_contas_fechadas',
+  },
+  {
+    up: migration_20260927_125035_pedidos_painel_frete.up,
+    down: migration_20260927_125035_pedidos_painel_frete.down,
+    name: '20260927_125035_pedidos_painel_frete'
   },
 ];

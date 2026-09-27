@@ -20,9 +20,12 @@ import {
 } from '@/lib/status-pedido'
 
 // Fundo colorido por status. Texto escuro sobre oliva/verde e texto papel
-// sobre marrom, para contraste legível; finalizado é neutro (borda).
+// sobre marrom, para contraste legível; validado é papel com borda verde;
+// finalizado é neutro (borda).
 const CORES_STATUS: Record<StatusPedido, string> = {
   pendente: 'bg-[color:var(--color-oliva)] text-[color:var(--color-marrom-escuro)]',
+  validado:
+    'border border-[color:var(--color-verde)] bg-[color:var(--color-papel)] text-[color:var(--color-marrom-escuro)]',
   pago: 'bg-[color:var(--color-verde)] text-[color:var(--color-marrom-escuro)]',
   em_transito: 'bg-[color:var(--color-marrom)] text-[color:var(--color-papel)]',
   finalizado: 'bg-[color:var(--color-borda)] text-[color:var(--color-paragrafo)]',

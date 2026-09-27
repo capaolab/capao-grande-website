@@ -107,9 +107,11 @@ export interface Config {
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('pt' | 'en') | ('pt' | 'en')[];
   globals: {
     configuracoes: Configuracoe;
+    'cardapio-delivery': CardapioDelivery;
   };
   globalsSelect: {
     configuracoes: ConfiguracoesSelect<false> | ConfiguracoesSelect<true>;
+    'cardapio-delivery': CardapioDeliverySelect<false> | CardapioDeliverySelect<true>;
   };
   locale: 'pt' | 'en';
   widgets: {
@@ -354,9 +356,13 @@ export interface Pedido {
    */
   subtotal?: number | null;
   /**
-   * Visível ao cliente no dashboard /area-cliente (RN09 revogada): pendente → "Recebido", pago → "Pagamento confirmado", em_transito → "Saiu para entrega", finalizado → "Entregue". Atualize conforme a conversa no WhatsApp avança.
+   * Informado pelo atendente antes de validar o pedido. O cliente vê o total (produtos + frete) a partir de "Validado".
    */
-  status: 'pendente' | 'pago' | 'em_transito' | 'finalizado';
+  frete?: number | null;
+  /**
+   * Visível ao cliente no dashboard /area-cliente (RN09 revogada): pendente → "Recebido", validado → "Pedido confirmado", pago → "Pagamento confirmado", em_transito → "Saiu para entrega", finalizado → "Entregue". Atualize conforme a conversa no WhatsApp avança.
+   */
+  status: 'pendente' | 'validado' | 'pago' | 'em_transito' | 'finalizado';
   updatedAt: string;
   createdAt: string;
 }
@@ -464,9 +470,13 @@ export interface PedidosPimenta {
    */
   subtotal?: number | null;
   /**
+   * Informado pelo atendente antes de validar um pedido com entrega (retirada: 0). O cliente vê o total a partir de "Validado".
+   */
+  frete?: number | null;
+  /**
    * Mesmo funil do delivery. Na retirada, "Em trânsito" aparece ao cliente como "Pronto para retirada".
    */
-  status: 'pendente' | 'pago' | 'em_transito' | 'finalizado';
+  status: 'pendente' | 'validado' | 'pago' | 'em_transito' | 'finalizado';
   updatedAt: string;
   createdAt: string;
 }
@@ -720,6 +730,7 @@ export interface PedidosSelect<T extends boolean = true> {
   localidade?: T;
   observacoes?: T;
   subtotal?: T;
+  frete?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -804,6 +815,7 @@ export interface PedidosPimentaSelect<T extends boolean = true> {
   localidade?: T;
   observacoes?: T;
   subtotal?: T;
+  frete?: T;
   status?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -884,6 +896,23 @@ export interface Configuracoe {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cardapio-delivery".
+ */
+export interface CardapioDelivery {
+  id: number;
+  /**
+   * Itens do cardápio que podem ser pedidos no delivery. Os tamanhos das pizzas ficam no campo abaixo.
+   */
+  itens?: (number | Cardapio)[] | null;
+  /**
+   * Tamanhos que o cliente pode escolher para as pizzas no delivery. Sem nenhum tamanho, as pizzas não aparecem no delivery.
+   */
+  tamanhos?: (number | Cardapio)[] | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "configuracoes_select".
  */
 export interface ConfiguracoesSelect<T extends boolean = true> {
@@ -909,6 +938,17 @@ export interface ConfiguracoesSelect<T extends boolean = true> {
         id?: T;
       };
   avisoRetirada?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cardapio-delivery_select".
+ */
+export interface CardapioDeliverySelect<T extends boolean = true> {
+  itens?: T;
+  tamanhos?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;

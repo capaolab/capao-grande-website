@@ -13,7 +13,9 @@
 //       * "Publicações mais recentes" (link para a página anterior) exibido
 //         quando a página atual é > 1 (auxílio de navegação).
 //   - um <Placeholder> de estado vazio quando não há informes publicados
-//     (nunca fabrica dados — design "Estratégia de placeholder").
+//     (nunca fabrica dados — design "Estratégia de placeholder");
+//   - um filtro por etiqueta (`?etiqueta=<id>`), preservado na paginação.
+//     Oculto no preview estático, que não lê query string.
 //
 // Next 16 (App Router): `searchParams` é uma PROMISE nas props da página.
 // Assinatura confirmada em
@@ -28,7 +30,7 @@ import Link from 'next/link'
 
 import { InformeCard } from '@/components/InformeCard'
 import { Placeholder } from '@/components/Placeholder'
-import { getInformesPagina } from '@/lib/queries'
+import { getEtiquetas, getInformesPagina } from '@/lib/queries'
 
 /**
  * Converte o valor bruto de `?page=` (string | string[] | undefined) em um
@@ -43,6 +45,27 @@ function parsePage(raw: string | string[] | undefined): number {
   return Number.isFinite(n) && n >= 1 ? n : 1
 }
 
+/** `?etiqueta=` → id inteiro positivo, ou `undefined` (sem filtro). */
+function parseEtiqueta(raw: string | string[] | undefined): number | undefined {
+  const value = Array.isArray(raw) ? raw[0] : raw
+  if (value == null) return undefined
+  const n = Number.parseInt(value, 10)
+  return Number.isFinite(n) && n >= 1 ? n : undefined
+}
+
+/** Monta o href de /informes mantendo o filtro de etiqueta. */
+function hrefInformes(etiquetaId: number | undefined, page = 1): string {
+  const params = new URLSearchParams()
+  if (etiquetaId != null) params.set('etiqueta', String(etiquetaId))
+  if (page > 1) params.set('page', String(page))
+  const query = params.toString()
+  return query ? `/informes?${query}` : '/informes'
+}
+
+const CLASSE_FILTRO =
+  'borda-sistema hover-verde inline-flex rounded-full px-4 py-1.5 text-sm text-[color:var(--color-paragrafo)] ' +
+  'aria-[current=page]:border-[color:var(--color-marrom)] aria-[current=page]:bg-[color:var(--color-marrom)] aria-[current=page]:text-[color:var(--color-papel)]'
+
 export default async function InformesPage({
   searchParams,
 }: {
@@ -54,9 +77,14 @@ export default async function InformesPage({
   // pular a leitura aqui: a camada estática (content/static-content.ts)
   // ignora `page` e devolve todos os informes publicados numa página só.
   const staticMode = process.env.CONTENT_SOURCE === 'static'
-  const page = staticMode ? 1 : parsePage((await searchParams).page)
+  const params = staticMode ? {} : await searchParams
+  const page = parsePage(params.page)
+  const etiquetaId = parseEtiqueta(params.etiqueta)
 
-  const { informes, pagination } = await getInformesPagina(page)
+  const [{ informes, pagination }, etiquetas] = await Promise.all([
+    getInformesPagina(page, etiquetaId),
+    getEtiquetas(),
+  ])
 
   const paginaAnterior = pagination.page - 1
   const paginaSeguinte = pagination.page + 1
@@ -77,6 +105,35 @@ export default async function InformesPage({
           </p>
         ) : null}
       </header>
+
+      {/* Filtro por etiqueta: links simples (funciona sem JS); a opção ativa
+          leva aria-current. */}
+      {etiquetas.length > 0 ? (
+        <nav aria-label="Filtrar por etiqueta" className="mb-8">
+          <ul className="flex list-none flex-wrap gap-2 p-0">
+            <li>
+              <Link
+                href={hrefInformes(undefined)}
+                aria-current={etiquetaId == null ? 'page' : undefined}
+                className={CLASSE_FILTRO}
+              >
+                Todas
+              </Link>
+            </li>
+            {etiquetas.map((etiqueta) => (
+              <li key={etiqueta.id}>
+                <Link
+                  href={hrefInformes(etiqueta.id)}
+                  aria-current={etiquetaId === etiqueta.id ? 'page' : undefined}
+                  className={CLASSE_FILTRO}
+                >
+                  {etiqueta.nome}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
 
       {informes.length > 0 ? (
         // Seção da lista com um <h2> só para leitores de tela: mantém a
@@ -111,7 +168,7 @@ export default async function InformesPage({
         >
           {pagination.page > 1 ? (
             <Link
-              href={`/informes?page=${paginaAnterior}`}
+              href={hrefInformes(etiquetaId, paginaAnterior)}
               className="btn-primario"
               aria-label="Publicações mais recentes"
             >
@@ -125,7 +182,7 @@ export default async function InformesPage({
               já exibidos (Req 11.3, 11.5). */}
           {pagination.hasNextPage ? (
             <Link
-              href={`/informes?page=${paginaSeguinte}`}
+              href={hrefInformes(etiquetaId, paginaSeguinte)}
               className="btn-primario"
               aria-label="Publicações mais antigas"
             >

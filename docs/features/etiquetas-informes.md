@@ -25,6 +25,9 @@ com CRUD no Payload (`/admin`). Cada informe pode ter várias etiquetas.
   etiqueta.
 - RN-E06: o site público (card, destaque na home e página do informe) exibe
   os nomes das etiquetas separados por " · ", com a mesma aparência de antes.
+- RN-E07: `/informes` tem um filtro por etiqueta (`?etiqueta=<id>`), com a
+  opção "Todas". A paginação mantém o filtro. No preview estático o filtro
+  não aparece (não há query string).
 
 ## TAREFAS
 
@@ -54,10 +57,18 @@ com CRUD no Payload (`/admin`). Cada informe pode ter várias etiquetas.
 - [x] `InformeCard`, a home e `informes/[slug]` exibem os nomes via
       `nomesEtiquetas` (`lib/etiquetas.ts`) (RN-E06).
 
+### Tarefa 4: Filtro em `/informes`
+
+**Critérios de Aceite**
+
+- [x] Links "Todas" + uma opção por etiqueta, com `aria-current` na ativa
+      (RN-E07).
+- [x] `getInformesPagina(page, etiquetaId)` filtra por `etiquetas in [id]`, e
+      os links de paginação preservam `?etiqueta=`.
+
 ## FORA DO ESCOPO
 
 - Tradução pt/en do nome da etiqueta.
-- Filtro por etiqueta em `/informes`.
 
 ## REFERÊNCIAS
 

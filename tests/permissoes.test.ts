@@ -4,6 +4,8 @@ import {
   comRetorno,
   podeAcessarArea,
   rotaDeRetorno,
+  rotaFormularioPedido,
+  rotaListaPedidos,
   podeAcessarPainel,
   rotaPorRole,
   ROTA_ADMIN,
@@ -124,5 +126,28 @@ describe('rotaDeRetorno / comRetorno (retorno pós-login)', () => {
     expect(comRetorno('/login?x=1', '/pedido')).toBe('/login?x=1&next=%2Fpedido')
     expect(comRetorno('/login', '//evil.com')).toBe('/login')
     expect(comRetorno('/login', null)).toBe('/login')
+  })
+})
+
+describe('rotaFormularioPedido (pedidos-painel.md)', () => {
+  it('cliente pede no próprio painel; equipe no painel do funcionário', () => {
+    expect(rotaFormularioPedido('delivery', 'cliente')).toBe('/area-cliente/delivery/novo')
+    expect(rotaFormularioPedido('pimenta', 'cliente')).toBe('/area-cliente/pimenta/novo')
+    expect(rotaFormularioPedido('delivery', 'funcionario')).toBe('/area-funcionario/delivery/novo')
+    expect(rotaFormularioPedido('pimenta', 'admin')).toBe('/area-funcionario/pimenta/novo')
+  })
+
+  it('papel desconhecido não tem formulário', () => {
+    expect(rotaFormularioPedido('delivery', null)).toBeNull()
+    expect(rotaFormularioPedido('delivery', 'visitante')).toBeNull()
+  })
+})
+
+describe('rotaListaPedidos (pedidos-painel.md)', () => {
+  it('volta dos formulários para a lista da mesma visão', () => {
+    expect(rotaListaPedidos('delivery', 'cliente')).toBe('/area-cliente')
+    expect(rotaListaPedidos('pimenta', 'cliente')).toBe('/area-cliente/pimenta')
+    expect(rotaListaPedidos('delivery', 'funcionario')).toBe('/area-funcionario')
+    expect(rotaListaPedidos('pimenta', 'funcionario')).toBe('/area-funcionario/pimenta')
   })
 })

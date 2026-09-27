@@ -16,9 +16,11 @@ import { PedidosPimenta } from './collections/PedidosPimenta'
 import { ProdutosPimenta } from './collections/ProdutosPimenta'
 import { SecoesCardapio } from './collections/SecoesCardapio'
 import { Users } from './collections/Users'
+import { buscarClientes } from './endpoints/buscar-clientes'
 import { cadastroCliente } from './endpoints/cadastro-cliente'
 import { submeterPedido } from './endpoints/submeter-pedido'
 import { submeterPedidoPimenta } from './endpoints/submeter-pedido-pimenta'
+import { CardapioDelivery } from './globals/CardapioDelivery'
 import { Configuracoes } from './globals/Configuracoes'
 
 const filename = fileURLToPath(import.meta.url)
@@ -119,7 +121,8 @@ export default buildConfig({
     PedidosPimenta,
   ],
   // Configuracoes: global de configurações do estabelecimento (Req 8).
-  globals: [Configuracoes],
+  // CardapioDelivery: itens liberados para o delivery (pedidos-painel.md).
+  globals: [Configuracoes, CardapioDelivery],
   // Endpoint público de submissão de pedidos (delivery-pedidos.md, Tarefa 4):
   // POST /api/submeter-pedido — honeypot + rate limit + validação server-side.
   // Endpoint público de cadastro de clientes (dashboard-pedidos.md):
@@ -129,6 +132,8 @@ export default buildConfig({
     { path: '/cadastro-cliente', method: 'post', handler: cadastroCliente },
     // Pedidos de pimenta em mel (pimenta-em-mel.md): mesmo fluxo do delivery.
     { path: '/submeter-pedido-pimenta', method: 'post', handler: submeterPedidoPimenta },
+    // Busca de clientes para pedidos registrados pela equipe (pedidos-painel.md).
+    { path: '/buscar-clientes', method: 'get', handler: buscarClientes },
   ],
   // Saída dos tipos gerados por `payload generate:types` (task 4.7).
   typescript: {

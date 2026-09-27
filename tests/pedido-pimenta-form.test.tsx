@@ -205,3 +205,83 @@ describe('<PedidoPimentaForm>', () => {
     expect(screen.getByLabelText('Pimenta em mel (150 ml)')).toBeTruthy()
   })
 })
+
+// Visão da equipe (docs/features/pedidos-painel.md): busca de cliente com
+// autopreenchimento, ou cadastro do cliente junto com o pedido.
+describe('<PedidoPimentaForm modo="funcionario">', () => {
+  const ENCONTRADO = {
+    id: 9,
+    nome: 'Bia',
+    sobrenome: 'Lima',
+    telefone: '75988887777',
+    email: 'bia@example.com',
+    latitude: -12.6,
+    longitude: -41.5,
+    localidade: 'Vila',
+  }
+
+  function mockEquipe(resposta: { status: number; corpo: unknown }) {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.startsWith('/api/buscar-clientes')) {
+        return new Response(JSON.stringify({ clientes: [ENCONTRADO] }), { status: 200 })
+      }
+      return new Response(JSON.stringify(resposta.corpo), { status: resposta.status })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it('não pré-preenche com a conta logada; busca e escolhe o cliente', async () => {
+    const fetchMock = mockEquipe({ status: 201, corpo: { codigo: 'B9QZ', subtotal: 40 } })
+    render(<PedidoPimentaForm produtos={PRODUTOS} whatsappDigitos={null} modo="funcionario" />)
+
+    fireEvent.change(screen.getByLabelText('Buscar cliente cadastrado'), {
+      target: { value: 'bia' },
+    })
+    fireEvent.click(await screen.findByRole('button', { name: /Bia Lima/ }))
+
+    const nome = screen.getByLabelText('Nome (obrigatório)') as HTMLInputElement
+    expect(nome.value).toBe('Bia')
+    expect(nome.readOnly).toBe(true)
+    expect(
+      (screen.getByLabelText('Localidade ou ponto de referência') as HTMLInputElement).value,
+    ).toBe('Vila')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aumentar quantidade de Pote' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+
+    await screen.findByText('#B9QZ')
+    const corpo = corpoEnviado(fetchMock)
+    expect(corpo).toMatchObject({ cliente: { id: 9 }, latitude: -12.6, longitude: -41.5 })
+    expect(corpo).not.toHaveProperty('nome')
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/users/me')).toBe(false)
+    expect(screen.getByText('Ver pedidos').getAttribute('href')).toBe('/area-funcionario/pimenta')
+  })
+
+  it('cliente novo: exige os dados do cadastro e os envia com o pedido', async () => {
+    const fetchMock = mockEquipe({ status: 201, corpo: { codigo: 'N3WC', subtotal: 40 } })
+    render(<PedidoPimentaForm produtos={PRODUTOS} whatsappDigitos={null} modo="funcionario" />)
+
+    fireEvent.click(screen.getByRole('radio', { name: /Retirada na pizzaria/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Aumentar quantidade de Pote' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+
+    expect(await screen.findByText('Sobrenome é obrigatório.')).toBeTruthy()
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/submeter-pedido-pimenta')).toBe(false)
+
+    fireEvent.change(screen.getByLabelText('Nome (obrigatório)'), { target: { value: 'Caio' } })
+    fireEvent.change(screen.getByLabelText('Sobrenome (obrigatório)'), {
+      target: { value: 'Reis' },
+    })
+    fireEvent.change(screen.getByLabelText('Telefone (WhatsApp) (obrigatório)'), {
+      target: { value: '(75) 97777-6666' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Enviar pedido' }))
+
+    await screen.findByText('#N3WC')
+    expect(corpoEnviado(fetchMock)).toMatchObject({
+      cliente: { nome: 'Caio', sobrenome: 'Reis', telefone: '(75) 97777-6666' },
+      modalidade: 'retirada',
+    })
+  })
+})

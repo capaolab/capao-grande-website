@@ -73,6 +73,37 @@ export function validarCadastro(input: CadastroInput): string[] {
   return erros
 }
 
+/** Cliente cadastrado pelo funcionário junto com o pedido (pedidos-painel.md). */
+export interface ClienteBalcaoInput {
+  nome?: unknown
+  sobrenome?: unknown
+  telefone?: unknown
+  email?: unknown
+}
+
+/**
+ * Valida o cliente cadastrado no balcão: nome, sobrenome e telefone como no
+ * cadastro público; e-mail OPCIONAL (quem pede só pelo WhatsApp pode não
+ * informar) e sem senha (a conta recebe uma senha aleatória).
+ */
+export function validarClienteBalcao(input: ClienteBalcaoInput): string[] {
+  const temEmail = typeof input.email === 'string' && input.email.trim() !== ''
+  return validarCadastro({
+    ...input,
+    email: temEmail ? input.email : 'sem-email@example.com',
+    senha: 'x'.repeat(MIN_SENHA),
+  })
+}
+
+/**
+ * E-mail interno para a conta de um cliente cadastrado no balcão sem e-mail:
+ * a camada de auth do Payload exige um e-mail único, e o telefone já é o
+ * identificador do cliente.
+ */
+export function emailInternoCliente(telefone: string): string {
+  return `${normalizarTelefone(telefone)}@cliente.capaogrande.local`
+}
+
 export interface CadastroNormalizado {
   nome: string
   sobrenome: string
