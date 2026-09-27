@@ -151,8 +151,13 @@ async function seed() {
 
   // Cardápio — textos verbatim (Req 9.3); `preco` numérico (Tarefa 6 de
   // docs/features/delivery-pedidos.md).
+  // Cardápio do delivery (pedidos-painel.md): todos os itens e todos os
+  // tamanhos liberados, cada um na sua lista.
+  const tiposSecao = new Map(SECOES_CARDAPIO.map((secao) => [secao.nome, secao.tipo]))
+  const itensDelivery: number[] = []
+  const tamanhosDelivery: number[] = []
   for (const item of CARDAPIO) {
-    await payload.create({
+    const criado = await payload.create({
       collection: 'cardapio',
       locale: 'pt',
       data: {
@@ -164,7 +169,13 @@ async function seed() {
         ativo: true,
       },
     })
+    if (tiposSecao.get(item.secao) === 'tamanhos') tamanhosDelivery.push(criado.id)
+    else itensDelivery.push(criado.id)
   }
+  await payload.updateGlobal({
+    slug: 'cardapio-delivery',
+    data: { itens: itensDelivery, tamanhos: tamanhosDelivery },
+  })
 
   // Cronologia — `ano` texto, "a confirmar" para anos incertos (Req 9.4).
   for (const marco of CRONOLOGIA) {

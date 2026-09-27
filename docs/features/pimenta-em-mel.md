@@ -1,5 +1,10 @@
 # Pimenta em mel: página do produto, pedidos e localização do cliente
 
+> **Revisada por `docs/features/pedidos-painel.md`:** o formulário foi para o
+> painel (`/pimenta-em-mel/pedido` só redireciona), a equipe registra pedidos
+> para clientes do WhatsApp, e o funil ganhou `validado` (frete obrigatório na
+> entrega; 0 na retirada).
+
 ## CONTEXTO
 
 A pizzaria produz pimenta em mel. Clientes compram algumas unidades para casa,

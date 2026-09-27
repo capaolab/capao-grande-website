@@ -6,6 +6,7 @@ import {
   type PedidoPimentaInput,
 } from '@/lib/pimenta'
 
+import { ehOperacao, resolverClienteDoPedido } from './cliente-do-pedido'
 import { criarRateLimit, ehHoneypot, ipDoCliente } from './protecao'
 
 // Endpoint de submissão de pedidos de pimenta em mel
@@ -41,16 +42,29 @@ export const submeterPedidoPimenta: PayloadHandler = async (req) => {
     return Response.json({ recebido: true }, { status: 201 })
   }
 
-  if (!dentroDoLimite(ipDoCliente(req), Date.now())) {
+  // (b) Rate limit por IP — só para clientes: a equipe registra vários
+  // pedidos seguidos do balcão (pedidos-painel.md).
+  const operacao = ehOperacao(req)
+  if (!operacao && !dentroDoLimite(ipDoCliente(req), Date.now())) {
     return Response.json(
       { erros: ['Muitas submissões em pouco tempo. Tente novamente em alguns minutos.'] },
       { status: 429 },
     )
   }
 
-  const erros = validarPedidoPimenta(corpo)
+  // Pedido da equipe (pedidos-painel.md): nome e telefone vêm do cliente
+  // escolhido na busca ou cadastrado agora — validados depois do pedido,
+  // para não criar conta a partir de um pedido inválido.
+  const erros = validarPedidoPimenta(operacao ? { ...corpo, nome: '-', telefone: '-' } : corpo)
   if (erros.length > 0) {
     return Response.json({ erros }, { status: 400 })
+  }
+
+  if (operacao) {
+    const cliente = await resolverClienteDoPedido(req, (corpo as { cliente?: unknown }).cliente)
+    if (!cliente.ok) return Response.json({ erros: cliente.erros }, { status: 400 })
+    corpo.nome = cliente.nome
+    corpo.telefone = cliente.telefone
   }
 
   const entrega = corpo.modalidade === 'entrega'

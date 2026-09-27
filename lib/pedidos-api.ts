@@ -29,6 +29,8 @@ export interface PedidoResumo {
   telefone: string
   status: string
   subtotal?: number | null
+  /** Frete informado pelo funcionário ao validar (pedidos-painel.md). */
+  frete?: number | null
   localidade?: string | null
   createdAt: string
   itens: ItemPedidoResumo[]

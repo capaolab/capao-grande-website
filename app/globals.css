@@ -93,10 +93,13 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+/* auto-fill (não auto-fit): mantém as colunas vazias, então poucos cards
+   (ex.: um só, com filtro de etiqueta) ficam na largura normal em vez de
+   esticar pela linha toda. */
 .grade-reflow-larga {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 
 /* --- Hover verde em elementos interativos (Req 18.4) ---------------------- */

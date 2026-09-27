@@ -15,6 +15,10 @@
 // (/area-cliente) e aos de pimenta em mel (/area-cliente/pimenta), com os
 // rótulos de retirada quando for o caso.
 //
+// Total (pedidos-painel.md): enquanto `pendente`, só o valor dos produtos
+// (o frete ainda não foi informado); a partir de `validado`, produtos + frete
+// + total.
+//
 // Estados: carregando → lista | vazio (com link para a página do produto) | erro
 // (offline/preview estático/sessão expirada — mensagem sem quebrar a página).
 
@@ -27,6 +31,7 @@ import { usePedidosFiltrados } from '@/components/use-pedidos-filtrados'
 import { renderPreco } from '@/lib/cardapio'
 import { formatarDataHora, type ColecaoPedidos } from '@/lib/pedidos-api'
 import { ROTULO_MODALIDADE } from '@/lib/pimenta'
+import { totalPedido } from '@/lib/status-pedido'
 
 // Link do estado vazio, por collection.
 const LINK_VAZIO: Record<ColecaoPedidos, { href: string; rotulo: string }> = {
@@ -118,13 +123,22 @@ export function PedidosCliente({ colecao = 'pedidos' }: PedidosClienteProps = {}
                 ))}
               </ul>
 
-              {pedido.subtotal != null ? (
+              {pedido.subtotal != null && pedido.frete != null && pedido.status !== 'pendente' ? (
+                <p className="font-sans text-sm text-paragrafo">
+                  Produtos: {renderPreco(pedido.subtotal)} · Frete: {renderPreco(pedido.frete)}
+                  <br />
+                  Total:{' '}
+                  <strong className="font-serif text-xl text-marrom">
+                    {renderPreco(totalPedido(pedido.subtotal, pedido.frete))}
+                  </strong>
+                </p>
+              ) : pedido.subtotal != null ? (
                 <p className="font-sans text-sm text-paragrafo">
                   Produtos:{' '}
                   <strong className="text-marrom">{renderPreco(pedido.subtotal)}</strong>{' '}
                   {pedido.modalidade === 'retirada'
-                    ? '(o valor final é confirmado no WhatsApp)'
-                    : '(o valor final, com frete, é confirmado no WhatsApp)'}
+                    ? '(o total aparece aqui quando o pedido for confirmado)'
+                    : '(o total, com frete, aparece aqui quando o pedido for confirmado)'}
                 </p>
               ) : null}
             </li>

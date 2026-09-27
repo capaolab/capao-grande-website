@@ -2,6 +2,7 @@ import type { PayloadHandler } from 'payload'
 
 import { validarPedido, type ItemPedidoEntrada, type PedidoInput } from '@/lib/pedidos'
 
+import { ehOperacao, resolverClienteDoPedido } from './cliente-do-pedido'
 import { criarRateLimit, ehHoneypot, ipDoCliente } from './protecao'
 
 // Endpoint de submissão de pedidos de delivery
@@ -50,8 +51,10 @@ export const submeterPedido: PayloadHandler = async (req) => {
     return Response.json({ recebido: true }, { status: 201 })
   }
 
-  // (b) Rate limit por IP.
-  if (!dentroDoLimite(ipDoCliente(req), Date.now())) {
+  // (b) Rate limit por IP — só para clientes: a equipe registra vários
+  // pedidos seguidos do balcão (pedidos-painel.md).
+  const operacao = ehOperacao(req)
+  if (!operacao && !dentroDoLimite(ipDoCliente(req), Date.now())) {
     return Response.json(
       { erros: ['Muitas submissões em pouco tempo. Tente novamente em alguns minutos.'] },
       { status: 429 },
@@ -59,9 +62,19 @@ export const submeterPedido: PayloadHandler = async (req) => {
   }
 
   // (c) Validação server-side (nome, telefone, ≥1 item, lat/lng).
-  const erros = validarPedido(corpo)
+  // Pedido da equipe (pedidos-painel.md): nome e telefone vêm do cliente
+  // escolhido na busca ou cadastrado agora — validados depois do pedido,
+  // para não criar conta a partir de um pedido inválido.
+  const erros = validarPedido(operacao ? { ...corpo, nome: '-', telefone: '-' } : corpo)
   if (erros.length > 0) {
     return Response.json({ erros }, { status: 400 })
+  }
+
+  if (operacao) {
+    const cliente = await resolverClienteDoPedido(req, (corpo as { cliente?: unknown }).cliente)
+    if (!cliente.ok) return Response.json({ erros: cliente.erros }, { status: 400 })
+    corpo.nome = cliente.nome
+    corpo.telefone = cliente.telefone
   }
 
   // (d) Criação via Local API — os hooks da collection geram `codigo` e

@@ -4,9 +4,14 @@
 //
 // Lista TODOS os pedidos (o access da collection libera leitura total para
 // funcionário/admin) e faz GESTÃO MANUAL do status: cada card mostra o botão
-// da próxima transição do funil (pendente → pago → em_transito → finalizado),
-// que faz PATCH /api/pedidos/:id com atualização otimista (reverte e avisa
-// com role="alert" em caso de erro).
+// da próxima transição do funil (pendente → validado → pago → em_transito →
+// finalizado), que faz PATCH /api/pedidos/:id com atualização otimista
+// (reverte e avisa com role="alert" em caso de erro).
+//
+// Validar (pedidos-painel.md): no card `pendente` com entrega há um campo
+// "Frete (R$)"; o botão "Validar pedido" só fica ativo com um valor válido e
+// grava frete + status num único PATCH. Na retirada o servidor grava frete 0.
+// A partir de `validado` o card mostra frete e total.
 //
 // Visão inicial: pedidos do DIA (usePedidosFiltrados), com filtro por status
 // em chips com contagem — o dia inteiro está em memória, então o filtro é
@@ -27,14 +32,17 @@ import { useMemo, useState, type ReactElement } from 'react'
 import { PedidosFiltro } from '@/components/PedidosFiltro'
 import { StatusPedidoBadge } from '@/components/StatusPedidoBadge'
 import { usePedidosFiltrados } from '@/components/use-pedidos-filtrados'
+import { lerValorReais, paraReais } from '@/lib/caixa'
 import { renderPreco } from '@/lib/cardapio'
 import { formatarDataHora, type ColecaoPedidos, type PedidoResumo } from '@/lib/pedidos-api'
 import { ROTULO_MODALIDADE } from '@/lib/pimenta'
 import {
   ehStatusPedido,
+  exigeFrete,
   proximoStatus,
   ROTULO_STATUS,
   STATUS_PEDIDO,
+  totalPedido,
   type StatusPedido,
 } from '@/lib/status-pedido'
 
@@ -53,6 +61,8 @@ export function PedidosFuncionario({
   // Ids com PATCH em andamento: desabilita o botão do card.
   const [atualizando, setAtualizando] = useState<Set<number>>(new Set())
   const [erroAtualizacao, setErroAtualizacao] = useState<string | null>(null)
+  // Frete digitado por pedido (texto pt-BR, ex.: "12,50").
+  const [fretes, setFretes] = useState<Record<number, string>>({})
 
   // No modo 'todos' o status vai no query string (filtro server-side); no
   // modo 'dia' o hook ignora o parâmetro e o filtro é client-side.
@@ -92,28 +102,43 @@ export function PedidosFuncionario({
       ? pedidos.filter((p) => p.status === filtro)
       : pedidos
 
+  /** Frete a gravar ao validar: null = ainda não informado (ou inválido). */
+  function freteParaValidar(pedido: PedidoResumo): number | null {
+    if (!exigeFrete(pedido.modalidade ?? 'entrega')) return 0
+    const centavos = lerValorReais(fretes[pedido.id] ?? '')
+    return centavos == null ? null : paraReais(centavos)
+  }
+
   async function mudarStatus(pedido: PedidoResumo): Promise<void> {
     if (!ehStatusPedido(pedido.status)) return
     const proximo = proximoStatus(pedido.status, pedido.modalidade ?? 'entrega')
     if (!proximo) return
 
+    // Validar grava o frete junto com o status (pedidos-painel.md).
+    const validando = pedido.status === 'pendente'
+    const frete = validando ? freteParaValidar(pedido) : undefined
+    if (frete === null) return
+
     setErroAtualizacao(null)
     setAtualizando((atual) => new Set(atual).add(pedido.id))
 
     // Atualização otimista: o badge muda na hora; erro reverte.
-    const anterior = pedido.status
-    atualizarLocal(pedido.id, { status: proximo.status })
+    const anterior = { status: pedido.status, frete: pedido.frete }
+    const atualizacao = validando
+      ? { status: proximo.status, frete }
+      : { status: proximo.status }
+    atualizarLocal(pedido.id, atualizacao)
 
     try {
       const res = await fetch(`/api/${colecao}/${pedido.id}`, {
         method: 'PATCH',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: proximo.status }),
+        body: JSON.stringify(atualizacao),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
     } catch {
-      atualizarLocal(pedido.id, { status: anterior })
+      atualizarLocal(pedido.id, anterior)
       setErroAtualizacao(
         `Não foi possível atualizar o pedido #${pedido.codigo}. Tente novamente.`,
       )
@@ -208,6 +233,10 @@ export function PedidosFuncionario({
             const proximo = ehStatusPedido(pedido.status)
               ? proximoStatus(pedido.status, pedido.modalidade ?? 'entrega')
               : null
+            const pedeFrete =
+              pedido.status === 'pendente' && exigeFrete(pedido.modalidade ?? 'entrega')
+            const semFrete = pedido.status === 'pendente' && freteParaValidar(pedido) === null
+            const idFrete = `frete-${colecao}-${pedido.id}`
             return (
               <li
                 key={pedido.id}
@@ -239,22 +268,58 @@ export function PedidosFuncionario({
                   ))}
                 </ul>
 
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-sans text-sm text-paragrafo">
-                    {pedido.subtotal != null ? (
-                      <>
-                        Produtos:{' '}
-                        <strong className="text-marrom">{renderPreco(pedido.subtotal)}</strong>
-                      </>
-                    ) : null}
-                    {pedido.localidade ? <> · {pedido.localidade}</> : null}
-                  </p>
+                <p className="font-sans text-sm text-paragrafo">
+                  {pedido.subtotal != null ? (
+                    <>
+                      Produtos:{' '}
+                      <strong className="text-marrom">{renderPreco(pedido.subtotal)}</strong>
+                    </>
+                  ) : null}
+                  {pedido.frete != null ? (
+                    <>
+                      {' '}
+                      · Frete: <strong className="text-marrom">{renderPreco(pedido.frete)}</strong>
+                      {pedido.subtotal != null ? (
+                        <>
+                          {' '}
+                          · Total:{' '}
+                          <strong className="text-marrom">
+                            {renderPreco(totalPedido(pedido.subtotal, pedido.frete))}
+                          </strong>
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {pedido.localidade ? <> · {pedido.localidade}</> : null}
+                </p>
+
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  {pedeFrete ? (
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor={idFrete} className="font-sans text-sm text-marrom">
+                        Frete (R$)
+                      </label>
+                      <input
+                        id={idFrete}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0,00"
+                        value={fretes[pedido.id] ?? ''}
+                        onChange={(e) =>
+                          setFretes((atual) => ({ ...atual, [pedido.id]: e.target.value }))
+                        }
+                        className="borda-sistema w-28 rounded-[var(--radius)] bg-[color:var(--color-papel)] px-3 py-2 font-sans text-marrom"
+                      />
+                    </div>
+                  ) : (
+                    <span aria-hidden="true" />
+                  )}
 
                   {proximo ? (
                     <button
                       type="button"
                       onClick={() => mudarStatus(pedido)}
-                      disabled={atualizando.has(pedido.id)}
+                      disabled={atualizando.has(pedido.id) || semFrete}
                       className="btn-primario disabled:opacity-60"
                     >
                       {atualizando.has(pedido.id) ? 'Atualizando…' : proximo.rotuloAcao}

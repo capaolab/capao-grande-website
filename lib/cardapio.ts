@@ -100,3 +100,27 @@ export function agruparCardapio<T extends ItemAgrupavel>(itens: T[]): SecaoAgrup
 function ordemDe(item: { ordem?: number | null }): number {
   return item.ordem ?? 0
 }
+
+/**
+ * Cardápio do delivery (docs/features/pedidos-painel.md): só os itens e os
+ * tamanhos liberados pelo admin no global `cardapio-delivery`. Sem nenhum
+ * tamanho liberado, as seções de preço pelo tamanho (pizzas) saem junto —
+ * não haveria como escolher o tamanho. Seções que ficam sem itens são
+ * omitidas.
+ */
+export function filtrarCardapioDelivery<T extends { id: number }>(
+  grupos: { secao: string; tipo: TipoSecao; itens: T[] }[],
+  liberados: { itens: ReadonlySet<number>; tamanhos: ReadonlySet<number> },
+): { secao: string; tipo: TipoSecao; itens: T[] }[] {
+  const semTamanhos = !grupos.some(
+    (grupo) =>
+      grupo.tipo === 'tamanhos' && grupo.itens.some((item) => liberados.tamanhos.has(item.id)),
+  )
+  return grupos
+    .filter((grupo) => !(semTamanhos && grupo.tipo === 'por-tamanho'))
+    .map((grupo) => {
+      const ids = grupo.tipo === 'tamanhos' ? liberados.tamanhos : liberados.itens
+      return { ...grupo, itens: grupo.itens.filter((item) => ids.has(item.id)) }
+    })
+    .filter((grupo) => grupo.itens.length > 0)
+}

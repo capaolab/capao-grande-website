@@ -19,11 +19,12 @@ import type {
   Cardapio,
   Configuracoe,
   Cronologia,
+  Etiqueta,
   Informe,
   ProdutosPimenta,
 } from '@/src/payload-types'
 
-import { agruparCardapio, type SecaoAgrupada } from '@/lib/cardapio'
+import { agruparCardapio, filtrarCardapioDelivery, type SecaoAgrupada } from '@/lib/cardapio'
 import { ordenarCronologia } from '@/lib/cronologia'
 import { getPayloadClient } from '@/lib/payload'
 import { INFORMES_PER_PAGE, paginar, type PaginationState } from '@/lib/pagination'
@@ -123,14 +124,22 @@ export interface InformesPagina {
  * recalculado com `paginar(totalDocs, page)` para manter consistência com as
  * invariantes puras, em vez de depender apenas dos flags do Payload.
  */
-export async function getInformesPagina(page: number): Promise<InformesPagina> {
+export async function getInformesPagina(
+  page: number,
+  etiquetaId?: number,
+): Promise<InformesPagina> {
   if (CONTEUDO_ESTATICO) return staticContent.getInformesPagina(page)
 
   const payload = await getPayloadClient()
 
+  // Filtro opcional por etiqueta (`/informes?etiqueta=<id>`): o informe entra
+  // se tiver a etiqueta entre as suas (relação hasMany).
   const result = await payload.find({
     collection: 'informes',
-    where: { publicado: { equals: true } },
+    where: {
+      publicado: { equals: true },
+      ...(etiquetaId != null ? { etiquetas: { in: [etiquetaId] } } : {}),
+    },
     sort: '-data',
     limit: INFORMES_PER_PAGE,
     page,
@@ -223,6 +232,27 @@ export async function getCardapioAgrupado(): Promise<SecaoAgrupada<Cardapio>[]> 
 }
 
 /**
+ * Cardápio do delivery (docs/features/pedidos-painel.md): o cardápio ativo
+ * agrupado, só com os itens e os tamanhos liberados no global
+ * `cardapio-delivery`. No preview estático não há global: devolve o
+ * cardápio inteiro.
+ */
+export async function getCardapioDelivery(): Promise<SecaoAgrupada<Cardapio>[]> {
+  const grupos = await getCardapioAgrupado()
+  if (CONTEUDO_ESTATICO) return grupos
+
+  const payload = await getPayloadClient()
+  const global = await payload.findGlobal({ slug: 'cardapio-delivery', depth: 0 })
+  const ids = (lista: (number | { id: number })[] | null | undefined) =>
+    new Set((lista ?? []).map((item) => (typeof item === 'object' ? item.id : item)))
+
+  return filtrarCardapioDelivery(grupos, {
+    itens: ids(global.itens),
+    tamanhos: ids(global.tamanhos),
+  })
+}
+
+/**
  * Produtos de pimenta em mel ativos, por `ordem`
  * (docs/features/pimenta-em-mel.md). No build estático não há catálogo: a
  * página exibe placeholder e o formulário, o aviso de indisponibilidade.
@@ -261,6 +291,24 @@ export async function getCronologia(): Promise<Cronologia[]> {
   })
 
   return ordenarCronologia(docs)
+}
+
+/**
+ * Etiquetas para o filtro de `/informes`, em ordem alfabética. No preview
+ * estático devolve `[]`: lá o filtro não é exibido (não há query string).
+ */
+export async function getEtiquetas(): Promise<Etiqueta[]> {
+  if (CONTEUDO_ESTATICO) return []
+
+  const payload = await getPayloadClient()
+
+  const { docs } = await payload.find({
+    collection: 'etiquetas',
+    sort: 'nome',
+    limit: 0,
+  })
+
+  return docs
 }
 
 /**

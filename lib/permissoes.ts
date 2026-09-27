@@ -76,3 +76,37 @@ export function comRetorno(caminho: string, retorno: string | null | undefined):
   const separador = caminho.includes('?') ? '&' : '?'
   return `${caminho}${separador}${PARAM_RETORNO}=${encodeURIComponent(seguro)}`
 }
+
+/** Tipo de pedido com formulário no painel (docs/features/pedidos-painel.md). */
+export type TipoPedido = 'delivery' | 'pimenta'
+
+/** URLs públicas dos formulários (CTAs e links do WhatsApp) — redirecionam ao painel. */
+export const ROTA_PUBLICA_PEDIDO: Record<TipoPedido, string> = {
+  delivery: '/pedido',
+  pimenta: '/pimenta-em-mel/pedido',
+}
+
+/**
+ * Formulário de pedido no painel, por papel: cliente pede para si; equipe
+ * (funcionário/admin) registra para um cliente. Sem papel conhecido ⇒ null.
+ */
+export function rotaFormularioPedido(
+  tipo: TipoPedido,
+  role: string | null | undefined,
+): string | null {
+  switch (role) {
+    case 'cliente':
+      return `${ROTA_CLIENTE}/${tipo}/novo`
+    case 'funcionario':
+    case 'admin':
+      return `${ROTA_FUNCIONARIO}/${tipo}/novo`
+    default:
+      return null
+  }
+}
+
+/** Lista de pedidos no painel, por tipo e visão (volta dos formulários). */
+export function rotaListaPedidos(tipo: TipoPedido, modo: 'cliente' | 'funcionario'): string {
+  const area = modo === 'cliente' ? ROTA_CLIENTE : ROTA_FUNCIONARIO
+  return tipo === 'delivery' ? area : `${area}/pimenta`
+}

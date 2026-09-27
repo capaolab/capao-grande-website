@@ -32,6 +32,12 @@
 // "Meus pedidos" (/area-cliente) — que lista os pedidos pelo telefone da
 // conta, então avisamos quando o pedido usou outro telefone.
 //
+// Modo funcionário (docs/features/pedidos-painel.md): o pedido é registrado
+// pela equipe para um cliente que pediu só pelo WhatsApp. Não há
+// pré-preenchimento com a conta logada; o bloco <BuscaCliente> (acima do
+// pedido) escolhe um cliente cadastrado ou coleta os dados para cadastrá-lo
+// no envio, e a confirmação orienta a equipe em vez do cliente.
+//
 // Acessibilidade: nenhum <h1> aqui (fica na página); labels associados por
 // htmlFor/id; erros inline com role/aria-describedby; regiões aria-live no
 // resumo e no subtotal; chips são <button> com aria-pressed e os tamanhos
@@ -41,9 +47,17 @@ import { useEffect, useState, type ReactElement } from 'react'
 import Link from 'next/link'
 
 import { buscarUsuarioAtual } from '@/lib/auth-client'
+import { validarClienteBalcao } from '@/lib/cadastro'
 import { renderPreco } from '@/lib/cardapio'
-import { comRetorno, ROTA_CLIENTE, ROTA_LOGIN } from '@/lib/permissoes'
+import { comRetorno, ROTA_CLIENTE, ROTA_FUNCIONARIO, ROTA_LOGIN } from '@/lib/permissoes'
 import { normalizarTelefone } from '@/lib/telefone'
+import {
+  BuscaCliente,
+  CLIENTE_BALCAO_VAZIO,
+  paraCorpoCliente,
+  pontoDoCliente,
+  type ClienteBalcao,
+} from './BuscaCliente'
 import { PedidoMapa, type PontoEntrega } from './PedidoMapa'
 import {
   paraEntradas,
@@ -60,6 +74,8 @@ export interface PedidoFormProps {
   secoes: SecaoPedido[]
   /** Dígitos do WhatsApp da pizzaria (para o link wa.me da confirmação); null = omitir botão. */
   whatsappDigitos: string | null
+  /** 'funcionario' = pedido registrado pela equipe para um cliente. */
+  modo?: 'cliente' | 'funcionario'
 }
 
 /** Erros de validação do cliente, por campo (mensagens pt-BR inline). */
@@ -70,7 +86,14 @@ interface ErrosCampos {
   localizacao?: string
 }
 
-export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactElement {
+export function PedidoForm({
+  secoes,
+  whatsappDigitos,
+  modo = 'cliente',
+}: PedidoFormProps): ReactElement {
+  const equipe = modo === 'funcionario'
+  const [cliente, setCliente] = useState<ClienteBalcao>(CLIENTE_BALCAO_VAZIO)
+  const [errosCliente, setErrosCliente] = useState<string[]>([])
   const [selecionados, setSelecionados] = useState<ItemSelecionado[]>([])
   const [nome, setNome] = useState('')
   const [telefone, setTelefone] = useState('')
@@ -96,6 +119,7 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
   // Pré-preenche nome e telefone com os dados da conta (login obrigatório,
   // RN12) sem sobrescrever o que o usuário já tiver digitado.
   useEffect(() => {
+    if (equipe) return
     let ativo = true
     buscarUsuarioAtual().then((usuario) => {
       if (!ativo || !usuario) return
@@ -113,15 +137,15 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
     return () => {
       ativo = false
     }
-  }, [])
+  }, [equipe])
 
   // Subtotal PARCIAL (RN08) e pizzas sem tamanho, espelhando o servidor.
   const { subtotal, pizzasPendentes } = useSelecaoCardapio(secoes, selecionados)
 
   function validar(): ErrosCampos {
     const erros: ErrosCampos = {}
-    if (nome.trim() === '') erros.nome = 'Informe seu nome.'
-    if (telefone.trim() === '') erros.telefone = 'Informe seu telefone (WhatsApp).'
+    if (!equipe && nome.trim() === '') erros.nome = 'Informe seu nome.'
+    if (!equipe && telefone.trim() === '') erros.telefone = 'Informe seu telefone (WhatsApp).'
     if (selecionados.length === 0) {
       erros.itens = 'Selecione ao menos um item do cardápio.'
     } else if (pizzasPendentes.length > 0) {
@@ -138,7 +162,10 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
 
     const erros = validar()
     setErrosCampos(erros)
-    if (Object.keys(erros).length > 0) return
+    const errosDoCliente =
+      equipe && cliente.id == null ? validarClienteBalcao(cliente) : []
+    setErrosCliente(errosDoCliente)
+    if (Object.keys(erros).length > 0 || errosDoCliente.length > 0) return
 
     setEnviando(true)
     try {
@@ -146,8 +173,9 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nome: nome.trim(),
-          telefone: telefone.trim(),
+          ...(equipe
+            ? { cliente: paraCorpoCliente(cliente) }
+            : { nome: nome.trim(), telefone: telefone.trim() }),
           itens: paraEntradas(selecionados),
           latitude: ponto!.latitude,
           longitude: ponto!.longitude,
@@ -187,6 +215,45 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
   }
 
   // ── Tela de confirmação (substitui o formulário) ──────────────────────────
+  if (confirmacao && equipe) {
+    return (
+      <section
+        aria-labelledby="pedido-confirmacao-titulo"
+        className="borda-sistema flex flex-col gap-4 rounded-[var(--radius)] bg-[color:var(--color-papel)] p-6"
+      >
+        <h2
+          id="pedido-confirmacao-titulo"
+          className="font-serif text-2xl text-[color:var(--color-marrom)]"
+        >
+          Pedido registrado
+        </h2>
+        <p className="font-serif text-4xl tracking-wide text-[color:var(--color-verde)]">
+          #{confirmacao.codigo}
+        </p>
+        <p className="font-sans text-[color:var(--color-paragrafo)]">
+          Valor dos produtos:{' '}
+          <strong className="text-[color:var(--color-marrom)]">
+            {renderPreco(confirmacao.subtotal)}
+          </strong>
+          . Informe o código ao cliente na conversa e valide o pedido com o frete na lista
+          de pedidos.
+        </p>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <Link href={ROTA_FUNCIONARIO} className="btn-primario w-fit">
+            Ver pedidos
+          </Link>
+          {/* Navegação completa: recomeça o formulário do zero. */}
+          <a
+            href={`${ROTA_FUNCIONARIO}/delivery/novo`}
+            className="hover-verde w-fit self-center font-sans text-[color:var(--color-marrom)] underline transition-colors"
+          >
+            Registrar outro pedido
+          </a>
+        </div>
+      </section>
+    )
+  }
+
   if (confirmacao) {
     return (
       <section
@@ -236,12 +303,12 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
             outro telefone. */}
         <div className="mt-2 flex flex-col gap-2 border-t border-[color:var(--color-borda)] pt-4">
           <p className="font-sans text-[color:var(--color-paragrafo)]">
-            Acompanhe o status deste e dos seus outros pedidos em &ldquo;Meus pedidos&rdquo;.
+            Acompanhe o status deste e dos seus outros pedidos em &ldquo;Delivery&rdquo;.
           </p>
           {telefoneConta && normalizarTelefone(telefone) !== telefoneConta ? (
             <p className="font-sans text-sm text-[color:var(--color-paragrafo)]">
               Este pedido usou um telefone diferente do cadastrado na sua conta, então
-              não aparecerá em &ldquo;Meus pedidos&rdquo;.
+              não aparecerá em &ldquo;Delivery&rdquo;.
             </p>
           ) : null}
           <Link
@@ -285,6 +352,20 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
         </div>
       ) : null}
 
+      {/* Cliente do pedido (só na visão da equipe) -------------------------- */}
+      {equipe ? (
+        <BuscaCliente
+          valor={cliente}
+          onChange={setCliente}
+          onSelecionar={(encontrado) => {
+            setPontoConta(pontoDoCliente(encontrado))
+            if (encontrado.localidade) setLocalidade(encontrado.localidade)
+          }}
+          erros={errosCliente}
+          idPrefixo="pedido"
+        />
+      ) : null}
+
       {/* Seletor de produtos (chips) + resumo do pedido em montagem -------- */}
       <SeletorItensCardapio
         secoes={secoes}
@@ -303,55 +384,59 @@ export function PedidoForm({ secoes, whatsappDigitos }: PedidoFormProps): ReactE
           id="pedido-dados-titulo"
           className="border-b-2 border-[color:var(--color-oliva)] pb-1 font-serif text-2xl text-[color:var(--color-marrom)]"
         >
-          Seus dados
+          {equipe ? 'Referência e observações' : 'Seus dados'}
         </h2>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="pedido-nome" className="font-sans text-[color:var(--color-marrom)]">
-            Nome (obrigatório)
-          </label>
-          <input
-            id="pedido-nome"
-            name="nome"
-            type="text"
-            required
-            autoComplete="name"
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            aria-invalid={errosCampos.nome ? true : undefined}
-            aria-describedby={errosCampos.nome ? 'pedido-erro-nome' : undefined}
-            className="borda-sistema rounded-[var(--radius)] bg-[color:var(--color-papel)] px-3 py-2 font-sans text-[color:var(--color-marrom)]"
-          />
-          {errosCampos.nome ? (
-            <p id="pedido-erro-nome" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
-              {errosCampos.nome}
-            </p>
-          ) : null}
-        </div>
+        {equipe ? null : (
+          <>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="pedido-nome" className="font-sans text-[color:var(--color-marrom)]">
+                Nome (obrigatório)
+              </label>
+              <input
+                id="pedido-nome"
+                name="nome"
+                type="text"
+                required
+                autoComplete="name"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                aria-invalid={errosCampos.nome ? true : undefined}
+                aria-describedby={errosCampos.nome ? 'pedido-erro-nome' : undefined}
+                className="borda-sistema rounded-[var(--radius)] bg-[color:var(--color-papel)] px-3 py-2 font-sans text-[color:var(--color-marrom)]"
+              />
+              {errosCampos.nome ? (
+                <p id="pedido-erro-nome" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
+                  {errosCampos.nome}
+                </p>
+              ) : null}
+            </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="pedido-telefone" className="font-sans text-[color:var(--color-marrom)]">
-            Telefone (WhatsApp) (obrigatório)
-          </label>
-          <input
-            id="pedido-telefone"
-            name="telefone"
-            type="tel"
-            required
-            inputMode="tel"
-            autoComplete="tel"
-            value={telefone}
-            onChange={(e) => setTelefone(e.target.value)}
-            aria-invalid={errosCampos.telefone ? true : undefined}
-            aria-describedby={errosCampos.telefone ? 'pedido-erro-telefone' : undefined}
-            className="borda-sistema rounded-[var(--radius)] bg-[color:var(--color-papel)] px-3 py-2 font-sans text-[color:var(--color-marrom)]"
-          />
-          {errosCampos.telefone ? (
-            <p id="pedido-erro-telefone" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
-              {errosCampos.telefone}
-            </p>
-          ) : null}
-        </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="pedido-telefone" className="font-sans text-[color:var(--color-marrom)]">
+                Telefone (WhatsApp) (obrigatório)
+              </label>
+              <input
+                id="pedido-telefone"
+                name="telefone"
+                type="tel"
+                required
+                inputMode="tel"
+                autoComplete="tel"
+                value={telefone}
+                onChange={(e) => setTelefone(e.target.value)}
+                aria-invalid={errosCampos.telefone ? true : undefined}
+                aria-describedby={errosCampos.telefone ? 'pedido-erro-telefone' : undefined}
+                className="borda-sistema rounded-[var(--radius)] bg-[color:var(--color-papel)] px-3 py-2 font-sans text-[color:var(--color-marrom)]"
+              />
+              {errosCampos.telefone ? (
+                <p id="pedido-erro-telefone" role="alert" className="font-sans text-sm text-[color:var(--color-marrom)]">
+                  {errosCampos.telefone}
+                </p>
+              ) : null}
+            </div>
+          </>
+        )}
 
         <div className="flex flex-col gap-1">
           <label htmlFor="pedido-localidade" className="font-sans text-[color:var(--color-marrom)]">

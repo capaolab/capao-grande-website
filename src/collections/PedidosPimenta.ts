@@ -6,6 +6,7 @@ import { OPCOES_STATUS_PEDIDO } from '@/lib/status-pedido'
 import { normalizarTelefone } from '@/lib/telefone'
 
 import { gerarCodigoUnico } from './codigo-unico'
+import { exigirFreteParaValidar } from './frete'
 import { resolverItensPimenta } from './itens-pimenta'
 
 // Pedidos de pimenta em mel (docs/features/pimenta-em-mel.md) — espelha a
@@ -17,6 +18,8 @@ import { resolverItensPimenta } from './itens-pimenta'
 // - `estabelecimento`: nome opcional do restaurante, para pedidos em lote.
 // - Itens e subtotal são calculados NO SERVIDOR só na criação e congelados
 //   depois (como `caixa`): mudar o status não depende do catálogo atual.
+// - `frete` (docs/features/pedidos-painel.md): obrigatório para validar na
+//   entrega; na retirada vale 0.
 // - `status`: MESMO funil do delivery (RN-P04), gerenciado pelo funcionário em
 //   /area-funcionario/pimenta e acompanhado pelo cliente em /area-cliente.
 //
@@ -145,6 +148,16 @@ export const PedidosPimenta: CollectionConfig = {
       },
     },
     {
+      name: 'frete',
+      type: 'number',
+      min: 0,
+      label: 'Frete (R$)',
+      admin: {
+        description:
+          'Informado pelo atendente antes de validar um pedido com entrega (retirada: 0). O cliente vê o total a partir de "Validado".',
+      },
+    },
+    {
       name: 'status',
       type: 'select',
       required: true,
@@ -187,6 +200,8 @@ export const PedidosPimenta: CollectionConfig = {
         } else if (!coordenadaValida(data.latitude, data.longitude)) {
           throw new Error('Pedido inválido: para entrega, informe o ponto no mapa.')
         }
+
+        exigirFreteParaValidar(data, originalDoc, data.modalidade ?? 'entrega')
 
         return data
       },

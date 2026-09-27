@@ -1,9 +1,10 @@
-import type { CollectionConfig } from 'payload'
+import { APIError, type CollectionConfig, type PayloadRequest } from 'payload'
 
 import { OPCOES_STATUS_PEDIDO } from '@/lib/status-pedido'
 import { normalizarTelefone } from '@/lib/telefone'
 
 import { gerarCodigoUnico } from './codigo-unico'
+import { exigirFreteParaValidar } from './frete'
 import { resolverItensCardapio } from './itens-cardapio'
 
 // Colecao_Pedidos (docs/features/delivery-pedidos.md, Tarefa 1): pedidos de
@@ -23,7 +24,10 @@ import { resolverItensCardapio } from './itens-cardapio'
 // - `subtotal`: soma dos produtos, calculada NO SERVIDOR a partir dos preços
 //   atuais do cardápio — nunca confiando no cliente (Tarefa 4). Não inclui
 //   frete: o preço final é informado pelo atendente via mensagem (RN08).
-// - `status`: pendente → pago → em_transito → finalizado. Era interno do
+// - `frete` (docs/features/pedidos-painel.md): informado pelo funcionário no
+//   card do pedido; obrigatório para sair de `pendente` (validar). A partir
+//   de `validado` o cliente vê o total (subtotal + frete).
+// - `status`: pendente → validado → pago → em_transito → finalizado. Era interno do
 //   atendente (antiga RN09 — REVOGADA pela feature dashboard-pedidos.md):
 //   agora o CLIENTE acompanha o status dos próprios pedidos no dashboard
 //   `/area-cliente` e o funcionário o gerencia em `/area-funcionario`.
@@ -39,6 +43,44 @@ import { resolverItensCardapio } from './itens-cardapio'
 // leem TODOS os pedidos, CLIENTE lê apenas os pedidos cujo `telefone` bate
 // com o da sua conta (vínculo por telefone normalizado); atualização restrita
 // a admin/funcionário (gestão manual de status); remoção só de admin.
+
+/**
+ * Rejeita item ou tamanho fora do global `cardapio-delivery`
+ * (docs/features/pedidos-painel.md): o admin escolhe os produtos e os
+ * tamanhos de pizza disponíveis no delivery.
+ */
+async function exigirItensDoDelivery(
+  itens: { item?: unknown; tamanho?: unknown }[],
+  req: PayloadRequest,
+): Promise<void> {
+  const global = await req.payload.findGlobal({ slug: 'cardapio-delivery', depth: 0, req })
+  const liberados = new Set((global.itens ?? []).map((item) => Number(item)))
+  const tamanhos = new Set((global.tamanhos ?? []).map((item) => Number(item)))
+
+  const foraDoDelivery = [
+    ...itens.map((entrada) => Number(entrada.item)).filter((id) => !liberados.has(id)),
+    ...itens
+      .filter((entrada) => entrada.tamanho != null)
+      .map((entrada) => Number(entrada.tamanho))
+      .filter((id) => !tamanhos.has(id)),
+  ]
+  if (foraDoDelivery.length === 0) return
+
+  const { docs } = await req.payload.find({
+    collection: 'cardapio',
+    where: { id: { in: foraDoDelivery } },
+    limit: 0,
+    depth: 0,
+    req,
+  })
+  const nomes = docs.length > 0 ? docs.map((doc) => doc.nome).join(', ') : foraDoDelivery.join(', ')
+  throw new APIError(
+    `Pedido inválido: ${nomes} não está disponível no delivery.`,
+    400,
+    null,
+    true,
+  )
+}
 
 export const Pedidos: CollectionConfig = {
   slug: 'pedidos',
@@ -189,6 +231,16 @@ export const Pedidos: CollectionConfig = {
       },
     },
     {
+      name: 'frete',
+      type: 'number',
+      min: 0,
+      label: 'Frete (R$)',
+      admin: {
+        description:
+          'Informado pelo atendente antes de validar o pedido. O cliente vê o total (produtos + frete) a partir de "Validado".',
+      },
+    },
+    {
       name: 'status',
       type: 'select',
       required: true,
@@ -198,7 +250,7 @@ export const Pedidos: CollectionConfig = {
       label: 'Status',
       admin: {
         description:
-          'Visível ao cliente no dashboard /area-cliente (RN09 revogada): pendente → "Recebido", pago → "Pagamento confirmado", em_transito → "Saiu para entrega", finalizado → "Entregue". Atualize conforme a conversa no WhatsApp avança.',
+          'Visível ao cliente no dashboard /area-cliente (RN09 revogada): pendente → "Recebido", validado → "Pedido confirmado", pago → "Pagamento confirmado", em_transito → "Saiu para entrega", finalizado → "Entregue". Atualize conforme a conversa no WhatsApp avança.',
       },
     },
   ],
@@ -215,20 +267,32 @@ export const Pedidos: CollectionConfig = {
       },
     ],
     beforeChange: [
-      async ({ data, req, operation }) => {
-        // Código público: gerado apenas na CRIAÇÃO (RN04), único na collection.
-        if (operation === 'create' && !data.codigo) {
-          data.codigo = await gerarCodigoUnico(req, 'pedidos')
+      async ({ data, req, operation, originalDoc }) => {
+        if (operation === 'create') {
+          // Código público: gerado apenas na CRIAÇÃO (RN04), único na collection.
+          if (!data.codigo) data.codigo = await gerarCodigoUnico(req, 'pedidos')
+
+          // Só itens liberados no cardápio do delivery (pedidos-painel.md).
+          await exigirItensDoDelivery(data.itens ?? [], req)
+
+          // Subtotal calculado no servidor a partir dos preços atuais do
+          // cardápio (Tarefa 4 — nunca confiar no cliente). Erros de domínio
+          // (item inexistente, pizza sem tamanho, quantidade inválida)
+          // REJEITAM a gravação com mensagem clara. Snapshots (nome/preço
+          // unitário) por item preservam o valor cobrado.
+          const resolvido = await resolverItensCardapio(data.itens ?? [], req, 'Pedido')
+          data.itens = resolvido.itens
+          data.subtotal = resolvido.subtotal
+        } else if (originalDoc) {
+          // Itens, preços e código congelados após a criação (como em
+          // `pedidos-pimenta`): o total mostrado ao cliente depois de
+          // validado não pode mudar com o cardápio.
+          data.codigo = originalDoc.codigo
+          data.itens = originalDoc.itens
+          data.subtotal = originalDoc.subtotal
         }
 
-        // Subtotal: recalculado SEMPRE no servidor a partir dos preços atuais
-        // do cardápio (Tarefa 4 — nunca confiar no cliente). Erros de domínio
-        // (item inexistente, pizza sem tamanho, quantidade inválida) REJEITAM
-        // a gravação com mensagem clara. Snapshots (nome/preço unitário) por
-        // item preservam o valor cobrado mesmo que o cardápio mude depois.
-        const resolvido = await resolverItensCardapio(data.itens ?? [], req, 'Pedido')
-        data.itens = resolvido.itens
-        data.subtotal = resolvido.subtotal
+        exigirFreteParaValidar(data, originalDoc, 'entrega')
 
         return data
       },

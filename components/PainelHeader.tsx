@@ -7,7 +7,7 @@
 // redor — só a navegação da área interna. Os itens dependem do papel
 // (`/api/users/me` em mount, via lib/auth-client.ts — padrão compatível com
 // o build estático de preview):
-// - cliente:     "Meus pedidos" (/area-cliente) + "Configurações"
+// - cliente:     "Delivery" (/area-cliente), "Pimenta em mel" + "Configurações"
 // - funcionario: "Delivery" (/area-funcionario), "Caixa" e "Histórico" —
 //                sem "Configurações" (conta gerida pelo admin no Payload)
 // - admin:       "Admin" (/admin) + "Configurações"
@@ -30,11 +30,13 @@ import { Watercolor } from '@/components/Watercolor'
 import { buscarUsuarioAtual, sair, type UsuarioAtual } from '@/lib/auth-client'
 import { rotaPorRole, ROTA_LOGIN } from '@/lib/permissoes'
 
-/** Item do menu interno; `exato` = só fica ativo na própria rota (não em sub-rotas). */
+/** Item do menu interno; `exato` = só fica ativo na própria rota (não em
+    sub-rotas), além das rotas sob `tambem` (ex.: o formulário de delivery). */
 interface ItemMenu {
   href: string
   label: string
   exato?: boolean
+  tambem?: string
 }
 
 /** Itens da área interna conforme o papel do usuário. */
@@ -42,7 +44,7 @@ function itensPorRole(role: string | null | undefined): ItemMenu[] {
   switch (role) {
     case 'cliente':
       return [
-        { href: '/area-cliente', label: 'Meus pedidos', exato: true },
+        { href: '/area-cliente', label: 'Delivery', exato: true, tambem: '/area-cliente/delivery' },
         { href: '/area-cliente/pimenta', label: 'Pimenta em mel' },
         { href: '/configuracoes', label: 'Configurações' },
       ]
@@ -51,7 +53,12 @@ function itensPorRole(role: string | null | undefined): ItemMenu[] {
       // pelo admin no Payload. `exato` evita que "Delivery" fique ativo
       // nas sub-rotas /pimenta, /caixa e /historico.
       return [
-        { href: '/area-funcionario', label: 'Delivery', exato: true },
+        {
+          href: '/area-funcionario',
+          label: 'Delivery',
+          exato: true,
+          tambem: '/area-funcionario/delivery',
+        },
         { href: '/area-funcionario/pimenta', label: 'Pimenta em mel' },
         { href: '/area-funcionario/caixa', label: 'Caixa' },
         { href: '/area-funcionario/historico', label: 'Histórico' },
@@ -67,6 +74,7 @@ function itensPorRole(role: string | null | undefined): ItemMenu[] {
 }
 
 function isAtivo(pathname: string, item: ItemMenu): boolean {
+  if (item.tambem && pathname.startsWith(item.tambem)) return true
   if (item.exato) return pathname === item.href
   return pathname === item.href || pathname.startsWith(`${item.href}/`)
 }
