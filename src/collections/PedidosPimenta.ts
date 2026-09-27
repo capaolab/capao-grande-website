@@ -7,6 +7,7 @@ import { normalizarTelefone } from '@/lib/telefone'
 
 import { gerarCodigoUnico } from './codigo-unico'
 import { exigirFreteParaValidar } from './frete'
+import { exigirTransicaoValida } from './transicao-status'
 import { resolverItensPimenta } from './itens-pimenta'
 
 // Pedidos de pimenta em mel (docs/features/pimenta-em-mel.md) — espelha a
@@ -201,6 +202,7 @@ export const PedidosPimenta: CollectionConfig = {
           throw new Error('Pedido inválido: para entrega, informe o ponto no mapa.')
         }
 
+        exigirTransicaoValida(data, originalDoc, data.modalidade ?? 'entrega', req.user?.role)
         exigirFreteParaValidar(data, originalDoc, data.modalidade ?? 'entrega')
 
         return data

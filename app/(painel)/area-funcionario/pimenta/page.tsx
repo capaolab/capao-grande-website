@@ -33,25 +33,25 @@ export default async function PimentaFuncionarioPage(): Promise<ReactElement> {
       <article className="flex w-full flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-serif text-4xl text-verde">Pedidos de pimenta em mel</h1>
-          <Link href={rotaFormularioPedido('pimenta', 'funcionario')!} className="btn-primario">
-            Novo pedido
-          </Link>
+          {/* Atalhos para a conversa do WhatsApp (pedidos-painel.md): link do
+              formulário para o cliente e chave Pix para o pagamento. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <BotaoCopiar
+              valor={ROTA_PUBLICA_PEDIDO.pimenta}
+              rotulo="Copiar link do pedido de pimenta em mel"
+            />
+            {isAConfirmar(chavePix) ? null : (
+              <BotaoCopiar valor={chavePix as string} rotulo="Copiar chave Pix" />
+            )}
+            <Link href={rotaFormularioPedido('pimenta', 'funcionario')!} className="btn-primario">
+              Novo pedido
+            </Link>
+          </div>
         </div>
         <p className="font-sans text-paragrafo">
           Pedidos por unidade e em lote. Atualize o status conforme o atendimento avança no
           WhatsApp — na retirada, &ldquo;em trânsito&rdquo; significa pronto para retirada.
         </p>
-        {/* Atalhos para a conversa do WhatsApp (pedidos-painel.md): link do
-            formulário para o cliente e chave Pix para o pagamento. */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <BotaoCopiar
-            valor={ROTA_PUBLICA_PEDIDO.pimenta}
-            rotulo="Copiar link do pedido de pimenta em mel"
-          />
-          {isAConfirmar(chavePix) ? null : (
-            <BotaoCopiar valor={chavePix as string} rotulo="Copiar chave Pix" />
-          )}
-        </div>
         <PedidosFuncionario colecao="pedidos-pimenta" />
       </article>
     </AreaInternaGuard>
