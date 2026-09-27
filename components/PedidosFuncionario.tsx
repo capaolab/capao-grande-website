@@ -21,6 +21,12 @@
 //
 // Estados de carregamento/erro seguem o padrão de <PedidosCliente>.
 //
+// Concorrência: a lista se atualiza sozinha a cada 15 s
+// (ATUALIZACAO_FUNCIONARIO_MS) e logo após cada mudança de status. Se a tela
+// estava desatualizada, o servidor recusa a transição com 409
+// (src/collections/transicao-status.ts): a mudança otimista é desfeita, a
+// lista é recarregada e o aviso explica o que houve.
+//
 // `colecao` (pimenta-em-mel.md, RN-P05): a mesma tela serve aos pedidos de
 // delivery (`pedidos`, padrão) e aos de pimenta em mel (`pedidos-pimenta`,
 // em /area-funcionario/pimenta) — mesmo funil de status. Nos de pimenta o
@@ -45,6 +51,9 @@ import {
   totalPedido,
   type StatusPedido,
 } from '@/lib/status-pedido'
+
+/** Intervalo da atualização automática da fila do funcionário. */
+const ATUALIZACAO_FUNCIONARIO_MS = 15_000
 
 /** Filtro ativo: 'todos' ou um dos status canônicos. */
 type Filtro = 'todos' | StatusPedido
@@ -71,11 +80,17 @@ export function PedidosFuncionario({
     modo,
     dia,
     pagina,
+    atualizadoEm,
     escolherDia,
     mostrarTodos,
     setPagina,
+    recarregar,
     atualizarLocal,
-  } = usePedidosFiltrados(filtro === 'todos' ? undefined : filtro, colecao)
+  } = usePedidosFiltrados(
+    filtro === 'todos' ? undefined : filtro,
+    colecao,
+    ATUALIZACAO_FUNCIONARIO_MS,
+  )
 
   const pedidos = useMemo(
     () => (estado.tipo === 'pronto' ? estado.pedidos : []),
@@ -136,7 +151,18 @@ export function PedidosFuncionario({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(atualizacao),
       })
+      if (res.status === 409) {
+        // Outra pessoa/aba já mudou o pedido: mostra o estado real.
+        atualizarLocal(pedido.id, anterior)
+        setErroAtualizacao(
+          `O pedido #${pedido.codigo} já tinha sido atualizado por outra pessoa. A lista foi recarregada — confira antes de continuar.`,
+        )
+        void recarregar()
+        return
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      // Sincroniza com o servidor (e com o que outros mudaram).
+      void recarregar()
     } catch {
       atualizarLocal(pedido.id, anterior)
       setErroAtualizacao(
@@ -175,6 +201,8 @@ export function PedidosFuncionario({
         onEscolherDia={escolherDia}
         onMostrarTodos={mostrarTodos}
         onPagina={setPagina}
+        atualizadoEm={atualizadoEm}
+        onAtualizar={recarregar}
       />
 
       {/* Filtros por status. No modo 'dia' com contagem (conjunto completo em

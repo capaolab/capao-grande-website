@@ -19,6 +19,9 @@
 // (o frete ainda não foi informado); a partir de `validado`, produtos + frete
 // + total.
 //
+// A lista se atualiza sozinha a cada 30 s (ATUALIZACAO_CLIENTE_MS) enquanto a
+// aba está visível — o cliente vê o status mudar sem recarregar a página.
+//
 // Estados: carregando → lista | vazio (com link para a página do produto) | erro
 // (offline/preview estático/sessão expirada — mensagem sem quebrar a página).
 
@@ -39,6 +42,9 @@ const LINK_VAZIO: Record<ColecaoPedidos, { href: string; rotulo: string }> = {
   'pedidos-pimenta': { href: '/pimenta-em-mel', rotulo: 'Conhecer a pimenta em mel' },
 }
 
+/** Intervalo da atualização automática da lista do cliente. */
+const ATUALIZACAO_CLIENTE_MS = 30_000
+
 export interface PedidosClienteProps {
   /** Collection de pedidos listada (padrão: delivery). */
   colecao?: ColecaoPedidos
@@ -50,10 +56,12 @@ export function PedidosCliente({ colecao = 'pedidos' }: PedidosClienteProps = {}
     modo,
     dia,
     pagina,
+    atualizadoEm,
     escolherDia,
     mostrarTodos,
     setPagina,
-  } = usePedidosFiltrados(undefined, colecao)
+    recarregar,
+  } = usePedidosFiltrados(undefined, colecao, ATUALIZACAO_CLIENTE_MS)
 
   if (estado.tipo === 'erro') {
     return (
@@ -74,6 +82,8 @@ export function PedidosCliente({ colecao = 'pedidos' }: PedidosClienteProps = {}
         onEscolherDia={escolherDia}
         onMostrarTodos={mostrarTodos}
         onPagina={setPagina}
+        atualizadoEm={atualizadoEm}
+        onAtualizar={recarregar}
       />
 
       {estado.tipo === 'carregando' ? (

@@ -174,6 +174,31 @@ transição (RN-D06) com atualização otimista (reverte + `role="alert"` em err
 - [x] Erro de atualização reverte o badge e avisa sem perder a lista.
 - [x] Pedido finalizado não exibe ação.
 
+### Tarefa 7 — Atualização automática e trava de concorrência ✅
+
+**Descrição**
+
+- `components/use-pedidos-filtrados.ts`: a lista é rebuscada em silêncio (sem
+  voltar a "Carregando…") a cada 15 s no funcionário e 30 s no cliente,
+  apenas com a aba visível, e na hora em que a aba volta ao foco. Falha
+  silenciosa mantém a última lista. `<PedidosFiltro>` mostra "Atualizado às
+  HH:MM:SS" e o botão "Atualizar". Polling em vez de WebSocket/SSE: volume
+  baixo e deploy self-hosted simples.
+- `src/collections/transicao-status.ts` (hooks de `pedidos` e
+  `pedidos-pimenta`): para o **funcionário**, o status só avança para a
+  próxima etapa a partir do status gravado no banco, e o frete só muda
+  enquanto o pedido está `pendente`. Tela desatualizada → 409; o painel
+  desfaz a mudança otimista, recarrega a lista e avisa. Admin e chamadas
+  internas (Local API sem usuário) ficam livres para correções manuais.
+
+**Critérios de Aceite**
+
+- [x] Pedido novo aparece na tela do funcionário sem recarregar a página.
+- [x] Aba oculta não gera requisições; ao voltar, a lista é atualizada.
+- [x] Tela desatualizada não faz o pedido voltar no funil nem troca o frete
+  de pedido já validado (`tests/transicao-status*.test.ts`).
+- [x] Admin continua podendo mover o status em qualquer direção.
+
 ## VERIFICAÇÃO E PENDÊNCIAS
 
 - `npm test`: 153 passando (incluindo suítes de integração com Postgres).

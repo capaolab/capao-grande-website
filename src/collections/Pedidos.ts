@@ -5,6 +5,7 @@ import { normalizarTelefone } from '@/lib/telefone'
 
 import { gerarCodigoUnico } from './codigo-unico'
 import { exigirFreteParaValidar } from './frete'
+import { exigirTransicaoValida } from './transicao-status'
 import { resolverItensCardapio } from './itens-cardapio'
 
 // Colecao_Pedidos (docs/features/delivery-pedidos.md, Tarefa 1): pedidos de
@@ -292,6 +293,7 @@ export const Pedidos: CollectionConfig = {
           data.subtotal = originalDoc.subtotal
         }
 
+        exigirTransicaoValida(data, originalDoc, 'entrega', req.user?.role)
         exigirFreteParaValidar(data, originalDoc, 'entrega')
 
         return data

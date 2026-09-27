@@ -34,22 +34,22 @@ export default async function AreaFuncionarioPage(): Promise<ReactElement> {
       <article className="flex w-full flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-serif text-4xl text-verde">Pedidos de delivery</h1>
-          <Link href={rotaFormularioPedido('delivery', 'funcionario')!} className="btn-primario">
-            Novo pedido
-          </Link>
+          {/* Atalhos para a conversa do WhatsApp (pedidos-painel.md): link do
+              formulário para o cliente e chave Pix para o pagamento. */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <BotaoCopiar valor={ROTA_PUBLICA_PEDIDO.delivery} rotulo="Copiar link do pedido de delivery" />
+            {isAConfirmar(chavePix) ? null : (
+              <BotaoCopiar valor={chavePix as string} rotulo="Copiar chave Pix" />
+            )}
+            <Link href={rotaFormularioPedido('delivery', 'funcionario')!} className="btn-primario">
+              Novo pedido
+            </Link>
+          </div>
         </div>
         <p className="font-sans text-paragrafo">
           Acompanhe a fila de pedidos e atualize o status conforme o atendimento
           avança no WhatsApp.
         </p>
-        {/* Atalhos para a conversa do WhatsApp (pedidos-painel.md): link do
-            formulário para o cliente e chave Pix para o pagamento. */}
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
-          <BotaoCopiar valor={ROTA_PUBLICA_PEDIDO.delivery} rotulo="Copiar link do pedido de delivery" />
-          {isAConfirmar(chavePix) ? null : (
-            <BotaoCopiar valor={chavePix as string} rotulo="Copiar chave Pix" />
-          )}
-        </div>
         <PedidosFuncionario />
       </article>
     </AreaInternaGuard>

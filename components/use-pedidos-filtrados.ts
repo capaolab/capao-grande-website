@@ -13,8 +13,14 @@
 // corretas). Mudar modo/dia/status volta para a página 1.
 //
 // `colecao` escolhe a collection (delivery ou pimenta em mel — mesmo formato).
+//
+// Atualização automática (`intervaloMs`): a lista é rebuscada em SILÊNCIO
+// (sem voltar a "Carregando…") a cada intervalo enquanto a aba está visível e
+// logo que ela volta ao foco. Falha silenciosa mantém a última lista —
+// `atualizadoEm` mostra desde quando. `recarregar()` faz a mesma busca
+// silenciosa sob demanda (botão "Atualizar", conflito 409).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   buscarPedidosPaginado,
@@ -40,12 +46,18 @@ export type EstadoPedidos =
       totalPaginas: number
     }
 
-export function usePedidosFiltrados(status?: string, colecao: ColecaoPedidos = 'pedidos') {
+export function usePedidosFiltrados(
+  status?: string,
+  colecao: ColecaoPedidos = 'pedidos',
+  intervaloMs?: number,
+) {
   const [modo, setModo] = useState<ModoPedidos>('dia')
   const [dia, setDiaState] = useState<Date>(() => new Date())
   const [pagina, setPagina] = useState(1)
   const [estado, setEstado] = useState<EstadoPedidos>({ tipo: 'carregando' })
-  const [recarregamento, setRecarregamento] = useState(0)
+  const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null)
+  // Busca silenciosa da consulta atual (trocada a cada consulta pelo effect).
+  const atualizarRef = useRef<() => Promise<void>>(() => Promise.resolve())
 
   // Mudança de status volta para a página 1 (padrão "ajustar estado durante
   // a renderização", como no SiteHeader).
@@ -55,10 +67,10 @@ export function usePedidosFiltrados(status?: string, colecao: ColecaoPedidos = '
     setPagina(1)
   }
 
-  // Identifica a consulta atual; quando muda (modo/dia/página/status ou
-  // recarregar()), volta ao estado 'carregando' ainda na renderização —
+  // Identifica a consulta atual; quando muda (modo/dia/página/status), volta
+  // ao estado 'carregando' ainda na renderização —
   // setState síncrono dentro do effect dispararia cascading renders.
-  const consulta = `${colecao}|${modo}|${dia.getTime()}|${pagina}|${status ?? ''}|${recarregamento}`
+  const consulta = `${colecao}|${modo}|${dia.getTime()}|${pagina}|${status ?? ''}`
   const [ultimaConsulta, setUltimaConsulta] = useState(consulta)
   if (ultimaConsulta !== consulta) {
     setUltimaConsulta(consulta)
@@ -77,8 +89,8 @@ export function usePedidosFiltrados(status?: string, colecao: ColecaoPedidos = '
             ...(status ? { status } : {}),
           }
 
-    buscarPedidosPaginado(filtro, colecao)
-      .then((res) => {
+    const buscar = () =>
+      buscarPedidosPaginado(filtro, colecao).then((res) => {
         if (!ativo) return
         setEstado({
           tipo: 'pronto',
@@ -86,15 +98,29 @@ export function usePedidosFiltrados(status?: string, colecao: ColecaoPedidos = '
           totalDocs: res.totalDocs,
           totalPaginas: res.totalPaginas,
         })
+        setAtualizadoEm(new Date())
       })
-      .catch(() => {
-        if (ativo) setEstado({ tipo: 'erro' })
-      })
+
+    // Primeira carga: falha vira estado de erro.
+    buscar().catch(() => {
+      if (ativo) setEstado({ tipo: 'erro' })
+    })
+
+    // Recargas silenciosas: falha mantém a lista atual.
+    const atualizar = () => buscar().catch(() => {})
+    atualizarRef.current = atualizar
+    const seVisivel = () => {
+      if (document.visibilityState === 'visible') void atualizar()
+    }
+    const timer = intervaloMs ? setInterval(seVisivel, intervaloMs) : undefined
+    document.addEventListener('visibilitychange', seVisivel)
 
     return () => {
       ativo = false
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', seVisivel)
     }
-  }, [colecao, modo, dia, pagina, status, recarregamento])
+  }, [colecao, modo, dia, pagina, status, intervaloMs])
 
   /** Seleciona um dia específico (ativa o modo 'dia'). */
   const escolherDia = useCallback((data: Date) => {
@@ -109,9 +135,8 @@ export function usePedidosFiltrados(status?: string, colecao: ColecaoPedidos = '
     setPagina(1)
   }, [])
 
-  const recarregar = useCallback(() => {
-    setRecarregamento((n) => n + 1)
-  }, [])
+  /** Rebusca silenciosa da consulta atual (sem voltar a 'carregando'). */
+  const recarregar = useCallback(() => atualizarRef.current(), [])
 
   /** Atualização local otimista de um pedido já carregado (ex.: mudança de
       status pelo funcionário) — sem refetch. */
@@ -136,6 +161,7 @@ export function usePedidosFiltrados(status?: string, colecao: ColecaoPedidos = '
     modo,
     dia,
     pagina,
+    atualizadoEm,
     escolherDia,
     mostrarTodos,
     setPagina,
