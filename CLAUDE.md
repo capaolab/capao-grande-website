@@ -1,131 +1,50 @@
-# CLAUDE.md
+@AGENTS.md
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+# capao-grande-website
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+Site da Pizzaria Capão Grande e painel interno (pedidos, delivery, caixa, cardápio, pimenta em mel). Um único app Next.js (App Router) + Payload CMS 3 + Postgres.
 
-## 1. Think Before Coding
+## Comandos
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+- Dev: `cp .env.example .env` e `docker compose up -d --build` (app em :3000, admin em `/admin`)
+- Seed (só dev local, apaga e recria dados): `docker compose exec app npm run seed`. Bloqueado para o Claude em `.claude/settings.json`; peça ao usuário
+- Testes unitários (gate do CI): `npx vitest --run --exclude 'tests/**/*.integration.test.ts'`
+- Todos os testes: `npm run test`. Os `*.integration.test.ts` precisam de Postgres em `DATABASE_URI` (padrão nos testes: `postgres://capao:capao@localhost:5432/capao_grande`); sem banco, são pulados
+- Typecheck: `npx tsc --noEmit` (não há script)
+- Lint: `npm run lint`, ou `npx eslint <arquivos>`
+- Tipos do Payload, após mudar collections/globals: `npm run generate:types`
+- Build do preview estático: `npm run build:static` (saída em `out/`)
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+## Estrutura
 
-## 2. Simplicity First
+- `src/`: backend Payload (`collections/`, `globals/`, `endpoints/`, `migrations/`, `payload.config.ts` = alias `@payload-config`)
+- `app/`: route groups `(frontend)` site público, `(painel)` áreas de cliente/funcionário, `(auth)` login/cadastro, `(payload)` admin + API
+- `lib/`: regras de negócio puras (as testadas). `lib/queries.ts` é a porta de leitura do CMS
+- `components/` fica na raiz, não em `src/`. O alias `@/*` aponta para a raiz
+- `content/seed-data.ts` alimenta o seed local e o preview estático (`content/static-content.ts`)
+- Regras de negócio novas são documentadas fora deste repo, em `../capaolab-core/docs/projetos/capao-grande-website/`. O `docs/` daqui é para design e artefatos do frontend
+- `docs/features/*.md`: specs da implementação atual em Payload, que será migrada para o capaolab-core. Os testes citam as regras pelo código (ex.: RN-E02)
+- `deploy/`: deploy manual de staging no servidor (`deploy.sh`, `compose.yml`)
 
-**Minimum code that solves the problem. Nothing speculative.**
+## Convenções
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+- Mudou collection ou campo → precisa de migration versionada em `src/migrations/`. O app não migra ao subir. Comandos do Payload são bloqueados para o Claude: peça ao usuário para rodar `docker compose exec app npm run payload migrate:create <nome>`
+- Feature nova → documente em `../capaolab-core/docs/projetos/capao-grande-website/features/`, com o modelo de `../capaolab-core/docs/core/features/_template.md`
+- Nova leitura do CMS → em `lib/queries.ts`, com o ramo `CONTEUDO_ESTATICO` (preview Vercel com `CONTENT_SOURCE=static`, sem banco)
+- Testes: property-based com fast-check (100 runs, `tests/setup.ts`). Ambiente `node` por padrão; componentes usam `// @vitest-environment jsdom` na 1ª linha
+- Commits: conventional commits em português (`feat:`, `fix(header):`, `chore(deploy):`), branches `feat/*`
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+## Cuidados
 
-## 3. Surgical Changes
+- Não editar à mão: `src/payload-types.ts`, `app/(payload)/admin/importMap.js`, migrations já aplicadas
+- Gerados: `.next/`, `out/`, `.build-static-tmp/`. `build:static` move `app/(payload)` para `.build-static-tmp/` durante o build
+- Não rodar comandos do Payload sem `NODE_ENV=production` contra banco que não seja o de dev: o modo dev faz `push` do schema e quebra o controle de migrations
+- `.next/standalone/.env` é cópia do `.env` real
+- `npm run lint` completo falha por 2 erros conhecidos em `docs/design/support.js` (mock de design); não conta como regressão
 
-**Touch only what you must. Clean up only your own mess.**
+## Pronto quando
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
-
-# CLAUDE.md
-
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
-
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
-
-## 1. Think Before Coding
-
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
-
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
-
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
-
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
-
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
-
----
-
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+1. `npx tsc --noEmit` passa
+2. `npx vitest --run --exclude 'tests/**/*.integration.test.ts'` passa
+3. `npx eslint <arquivos alterados>` sem erros
+4. Mudança de schema tem migration; feature nova tem doc em `../capaolab-core/docs/projetos/capao-grande-website/features/`
