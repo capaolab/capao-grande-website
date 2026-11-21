@@ -15,6 +15,8 @@
 
 ## Stack Tecnológica
 
+**Hoje** (em produção):
+
 - [Next.js](https://nextjs.org) (App Router)
 - [Payload CMS](https://payloadcms.com)
 - [PostgreSQL](https://www.postgresql.org)
@@ -22,6 +24,8 @@
 - [Tailwind CSS](https://tailwindcss.com)
 - [TypeScript](https://www.typescriptlang.org)
 - Docker / Docker Compose
+
+**Alvo:** o Payload e o Postgres saem deste repositório. O site passa a ser só frontend Next.js (`output: 'standalone'`) e consome a API [capaolab-core](https://github.com/capaolab/capaolab-core) no módulo `/v1/capao-grande/`. Ver a decisão [0002 — Frontends, chamadas à API e deploy](https://github.com/capaolab/capaolab-core/blob/main/docs/core/decisoes/0002-frontends-api-e-deploy.md). A migração terá desenho próprio.
 
 ## Documentação de Features
 
@@ -63,6 +67,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 Para parar os serviços, use `docker compose down` (adicione `-v` para também remover os volumes, como os dados do Postgres).
 
 ## Deploy
+
+> Os fluxos abaixo valem para a versão atual, com Payload e Postgres. O destino é o deploy start/maduro da [decisão 0002](https://github.com/capaolab/capaolab-core/blob/main/docs/core/decisoes/0002-frontends-api-e-deploy.md): container no Coolify (VPS) e, depois, Vercel, sem banco no site.
 
 Os fluxos de publicação e deploy:
 
